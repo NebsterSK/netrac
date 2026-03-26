@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "watch": "vite"
+        "watch": "vite",
+        "eslint": "eslint . --fix",
+        "prettier": "prettier --write resources/"
     },
     "devDependencies": {
         "@stylistic/eslint-plugin": "^5.10.0",

@@ -1,6 +1,6 @@
-import Settings from './Settings'
+import Settings from './Settings';
 const Controllers = {
     Settings: Object.assign(Settings, Settings),
-}
+};
 
-export default Controllers
+export default Controllers;
