@@ -1,0 +1,24 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\MonthlyBalance;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
+
+class MonthlyBalanceSeeder extends Seeder
+{
+    use WithoutModelEvents;
+
+    public function run(): void
+    {
+        $start = Carbon::now()->subMonths(23)->startOfMonth();
+
+        for ($i = 0; $i < 24; $i++) {
+            MonthlyBalance::factory()->create([
+                'date' => $start->copy()->addMonths($i),
+            ]);
+        }
+    }
+}

@@ -34,6 +34,7 @@ const inputEmail = ref(props.email);
             <div class="grid gap-6">
                 <div class="grid gap-2">
                     <Label for="email">Email</Label>
+
                     <Input
                         id="email"
                         type="email"
@@ -43,11 +44,13 @@ const inputEmail = ref(props.email);
                         class="mt-1 block w-full"
                         readonly
                     />
+
                     <InputError :message="errors.email" class="mt-2" />
                 </div>
 
                 <div class="grid gap-2">
                     <Label for="password">Password</Label>
+
                     <PasswordInput
                         id="password"
                         name="password"
@@ -56,6 +59,7 @@ const inputEmail = ref(props.email);
                         autofocus
                         placeholder="Password"
                     />
+
                     <InputError :message="errors.password" />
                 </div>
 
@@ -63,6 +67,7 @@ const inputEmail = ref(props.email);
                     <Label for="password_confirmation">
                         Confirm password
                     </Label>
+
                     <PasswordInput
                         id="password_confirmation"
                         name="password_confirmation"
@@ -70,6 +75,7 @@ const inputEmail = ref(props.email);
                         class="mt-1 block w-full"
                         placeholder="Confirm password"
                     />
+
                     <InputError :message="errors.password_confirmation" />
                 </div>
 

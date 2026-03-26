@@ -33,6 +33,7 @@ defineProps<{
             <Form v-bind="email.form()" v-slot="{ errors, processing }">
                 <div class="grid gap-2">
                     <Label for="email">Email address</Label>
+
                     <Input
                         id="email"
                         type="email"
@@ -41,6 +42,7 @@ defineProps<{
                         autofocus
                         placeholder="email@example.com"
                     />
+
                     <InputError :message="errors.email" />
                 </div>
 
@@ -58,6 +60,7 @@ defineProps<{
 
             <div class="space-x-1 text-center text-sm text-muted-foreground">
                 <span>Or, return to</span>
+
                 <TextLink :href="login()">log in</TextLink>
             </div>
         </div>

@@ -44,11 +44,13 @@ onMounted(async () => {
             <CardTitle class="flex gap-3">
                 <LockKeyhole class="size-4" />2FA recovery codes
             </CardTitle>
+
             <CardDescription>
                 Recovery codes let you regain access if you lose your 2FA
                 device. Store them in a secure password manager.
             </CardDescription>
         </CardHeader>
+
         <CardContent>
             <div
                 class="flex flex-col gap-3 select-none sm:flex-row sm:items-center sm:justify-between"
@@ -79,6 +81,7 @@ onMounted(async () => {
                     </Button>
                 </Form>
             </div>
+
             <div
                 :class="[
                     'relative overflow-hidden transition-all duration-300',
@@ -90,6 +93,7 @@ onMounted(async () => {
                 <div v-if="errors?.length" class="mt-6">
                     <AlertError :errors="errors" />
                 </div>
+
                 <div v-else class="mt-3 space-y-3">
                     <div
                         ref="recoveryCodeSectionRef"
@@ -102,6 +106,7 @@ onMounted(async () => {
                                 class="h-4 animate-pulse rounded bg-muted-foreground/20"
                             ></div>
                         </div>
+
                         <div
                             v-else
                             v-for="(code, index) in recoveryCodesList"
@@ -110,6 +115,7 @@ onMounted(async () => {
                             {{ code }}
                         </div>
                     </div>
+
                     <p class="text-xs text-muted-foreground select-none">
                         Each recovery code can be used once to access your
                         account and will be removed after use. If you need more,

@@ -1,9 +1,6 @@
-import AnnotationController from './AnnotationController';
+import AnnotationController from './AnnotationController'
 const Controllers = {
-    AnnotationController: Object.assign(
-        AnnotationController,
-        AnnotationController,
-    ),
-};
+    AnnotationController: Object.assign(AnnotationController, AnnotationController),
+}
 
-export default Controllers;
+export default Controllers

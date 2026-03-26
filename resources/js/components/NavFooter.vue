@@ -34,6 +34,7 @@ defineProps<Props>();
                             rel="noopener noreferrer"
                         >
                             <component :is="item.icon" />
+
                             <span>{{ item.title }}</span>
                         </a>
                     </SidebarMenuButton>

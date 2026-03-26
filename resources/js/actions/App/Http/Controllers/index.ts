@@ -1,6 +1,8 @@
-import Settings from './Settings';
+import MonthlyBalanceController from './MonthlyBalanceController'
+import Settings from './Settings'
 const Controllers = {
-    Settings: Object.assign(Settings, Settings),
-};
+    MonthlyBalanceController: Object.assign(MonthlyBalanceController, MonthlyBalanceController),
+Settings: Object.assign(Settings, Settings),
+}
 
-export default Controllers;
+export default Controllers

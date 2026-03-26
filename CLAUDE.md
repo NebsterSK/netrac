@@ -1,8 +1,19 @@
 # Laravel template
 
+- Always use available project (or fallback global) subagents to perform tasks corresponding to their skills.
+
 ## Structure
 
-- This project is located in E:\webs\template
+- This project is located in E:\webs\netrac
+
+## Variables
+
+- Do not use single letter variable names. Use simple, short, human-readable variable names.
+
+## Laravel
+
+- Use Laravel 13 syntax, models have their fillable properties set by PHP Attribute.
+- Always use FormRequest for validation.
 
 ===
 

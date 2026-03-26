@@ -43,6 +43,7 @@ defineProps<{
             <div class="grid gap-6">
                 <div class="grid gap-2">
                     <Label for="email">Email address</Label>
+
                     <Input
                         id="email"
                         type="email"
@@ -53,12 +54,14 @@ defineProps<{
                         autocomplete="email"
                         placeholder="email@example.com"
                     />
+
                     <InputError :message="errors.email" />
                 </div>
 
                 <div class="grid gap-2">
                     <div class="flex items-center justify-between">
                         <Label for="password">Password</Label>
+
                         <TextLink
                             v-if="canResetPassword"
                             :href="request()"
@@ -68,6 +71,7 @@ defineProps<{
                             Forgot password?
                         </TextLink>
                     </div>
+
                     <PasswordInput
                         id="password"
                         name="password"
@@ -76,12 +80,14 @@ defineProps<{
                         autocomplete="current-password"
                         placeholder="Password"
                     />
+
                     <InputError :message="errors.password" />
                 </div>
 
                 <div class="flex items-center justify-between">
                     <Label for="remember" class="flex items-center space-x-3">
                         <Checkbox id="remember" name="remember" :tabindex="3" />
+
                         <span>Remember me</span>
                     </Label>
                 </div>

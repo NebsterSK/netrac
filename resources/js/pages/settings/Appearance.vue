@@ -28,6 +28,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
                     title="Appearance settings"
                     description="Update your account's appearance settings"
                 />
+
                 <AppearanceTabs />
             </div>
         </SettingsLayout>

@@ -91,15 +91,18 @@ const rightNavItems: NavItem[] = [
                                 <Menu class="h-5 w-5" />
                             </Button>
                         </SheetTrigger>
+
                         <SheetContent side="left" class="w-[300px] p-6">
                             <SheetTitle class="sr-only"
                                 >Navigation menu</SheetTitle
                             >
+
                             <SheetHeader class="flex justify-start text-left">
                                 <AppLogoIcon
                                     class="size-6 fill-current text-black dark:text-white"
                                 />
                             </SheetHeader>
+
                             <div
                                 class="flex h-full flex-1 flex-col justify-between space-y-4 py-6"
                             >
@@ -124,6 +127,7 @@ const rightNavItems: NavItem[] = [
                                         {{ item.title }}
                                     </Link>
                                 </nav>
+
                                 <div class="flex flex-col space-y-4">
                                     <a
                                         v-for="item in rightNavItems"
@@ -138,6 +142,7 @@ const rightNavItems: NavItem[] = [
                                             :is="item.icon"
                                             class="h-5 w-5"
                                         />
+
                                         <span>{{ item.title }}</span>
                                     </a>
                                 </div>
@@ -179,6 +184,7 @@ const rightNavItems: NavItem[] = [
                                     />
                                     {{ item.title }}
                                 </Link>
+
                                 <div
                                     v-if="isCurrentUrl(item.href)"
                                     class="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"
@@ -222,6 +228,7 @@ const rightNavItems: NavItem[] = [
                                                     <span class="sr-only">{{
                                                         item.title
                                                     }}</span>
+
                                                     <component
                                                         :is="item.icon"
                                                         class="size-5 opacity-80 group-hover:opacity-100"
@@ -229,6 +236,7 @@ const rightNavItems: NavItem[] = [
                                                 </a>
                                             </Button>
                                         </TooltipTrigger>
+
                                         <TooltipContent>
                                             <p>{{ item.title }}</p>
                                         </TooltipContent>
@@ -253,6 +261,7 @@ const rightNavItems: NavItem[] = [
                                         :src="auth.user.avatar"
                                         :alt="auth.user.name"
                                     />
+
                                     <AvatarFallback
                                         class="rounded-lg bg-neutral-200 font-semibold text-black dark:bg-neutral-700 dark:text-white"
                                     >
@@ -261,6 +270,7 @@ const rightNavItems: NavItem[] = [
                                 </Avatar>
                             </Button>
                         </DropdownMenuTrigger>
+
                         <DropdownMenuContent align="end" class="w-56">
                             <UserMenuContent :user="auth.user" />
                         </DropdownMenuContent>

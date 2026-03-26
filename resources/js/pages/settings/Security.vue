@@ -72,6 +72,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                 >
                     <div class="grid gap-2">
                         <Label for="current_password">Current password</Label>
+
                         <PasswordInput
                             id="current_password"
                             name="current_password"
@@ -79,11 +80,13 @@ onUnmounted(() => clearTwoFactorAuthData());
                             autocomplete="current-password"
                             placeholder="Current password"
                         />
+
                         <InputError :message="errors.current_password" />
                     </div>
 
                     <div class="grid gap-2">
                         <Label for="password">New password</Label>
+
                         <PasswordInput
                             id="password"
                             name="password"
@@ -91,6 +94,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                             autocomplete="new-password"
                             placeholder="New password"
                         />
+
                         <InputError :message="errors.password" />
                     </div>
 
@@ -98,6 +102,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                         <Label for="password_confirmation"
                             >Confirm password</Label
                         >
+
                         <PasswordInput
                             id="password_confirmation"
                             name="password_confirmation"
@@ -105,6 +110,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                             autocomplete="new-password"
                             placeholder="Confirm password"
                         />
+
                         <InputError :message="errors.password_confirmation" />
                     </div>
 
@@ -158,6 +164,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                         >
                             <ShieldCheck />Continue setup
                         </Button>
+
                         <Form
                             v-else
                             v-bind="enable.form()"

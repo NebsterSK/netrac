@@ -28,6 +28,7 @@ defineExpose({
             :class="cn('pr-10', props.class)"
             v-bind="$attrs"
         />
+
         <button
             type="button"
             @click="showPassword = !showPassword"
@@ -40,6 +41,7 @@ defineExpose({
             :tabindex="-1"
         >
             <EyeOff v-if="showPassword" class="size-4" />
+
             <Eye v-else class="size-4" />
         </button>
     </div>

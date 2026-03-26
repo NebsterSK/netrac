@@ -16,5 +16,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Lukas',
             'email' => 'lukas@example.com',
         ]);
+
+        $this->call(MonthlyBalanceSeeder::class);
     }
 }

@@ -21,6 +21,7 @@ const patternId = `pattern-${useId()}`;
                 <path d="M-1 5L5 -1M3 9L8.5 3.5" stroke-width="0.5"></path>
             </pattern>
         </defs>
+
         <rect
             stroke="none"
             :fill="`url(#${patternId})`"

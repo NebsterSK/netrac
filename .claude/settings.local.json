@@ -1,13 +1,15 @@
 {
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "Bash(npx eslint:*)",
+      "Bash(node node_modules/.bin/eslint resources/js/pages/MonthlyBalance.vue)"
+    ]
+  },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "laravel-boost",
     "herd",
     "instruckt"
-  ],
-  "permissions": {
-    "allow": [
-      "Skill(update-config)"
-    ]
-  }
+  ]
 }

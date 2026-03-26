@@ -28,6 +28,7 @@ import { store } from '@/routes/register';
             <div class="grid gap-6">
                 <div class="grid gap-2">
                     <Label for="name">Name</Label>
+
                     <Input
                         id="name"
                         type="text"
@@ -38,11 +39,13 @@ import { store } from '@/routes/register';
                         name="name"
                         placeholder="Full name"
                     />
+
                     <InputError :message="errors.name" />
                 </div>
 
                 <div class="grid gap-2">
                     <Label for="email">Email address</Label>
+
                     <Input
                         id="email"
                         type="email"
@@ -52,11 +55,13 @@ import { store } from '@/routes/register';
                         name="email"
                         placeholder="email@example.com"
                     />
+
                     <InputError :message="errors.email" />
                 </div>
 
                 <div class="grid gap-2">
                     <Label for="password">Password</Label>
+
                     <PasswordInput
                         id="password"
                         required
@@ -65,11 +70,13 @@ import { store } from '@/routes/register';
                         name="password"
                         placeholder="Password"
                     />
+
                     <InputError :message="errors.password" />
                 </div>
 
                 <div class="grid gap-2">
                     <Label for="password_confirmation">Confirm password</Label>
+
                     <PasswordInput
                         id="password_confirmation"
                         required
@@ -78,6 +85,7 @@ import { store } from '@/routes/register';
                         name="password_confirmation"
                         placeholder="Confirm password"
                     />
+
                     <InputError :message="errors.password_confirmation" />
                 </div>
 
