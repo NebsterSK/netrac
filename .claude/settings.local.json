@@ -1,0 +1,13 @@
+{
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "laravel-boost",
+    "herd",
+    "instruckt"
+  ],
+  "permissions": {
+    "allow": [
+      "Skill(update-config)"
+    ]
+  }
+}
