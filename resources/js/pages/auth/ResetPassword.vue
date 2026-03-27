@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
@@ -10,12 +9,10 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import { update } from '@/routes/password';
 
-const props = defineProps<{
+defineProps<{
     token: string;
     email: string;
 }>();
-
-const inputEmail = ref(props.email);
 </script>
 
 <template>
@@ -40,7 +37,7 @@ const inputEmail = ref(props.email);
                         type="email"
                         name="email"
                         autocomplete="email"
-                        v-model="inputEmail"
+                        :default-value="email"
                         class="mt-1 block w-full"
                         readonly
                     />

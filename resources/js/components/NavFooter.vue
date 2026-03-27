@@ -6,7 +6,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { toUrl } from '@/lib/utils';
+import { cn, toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
 
 type Props = {
@@ -14,13 +14,11 @@ type Props = {
     class?: string;
 };
 
-defineProps<Props>();
+const props = defineProps<Props>();
 </script>
 
 <template>
-    <SidebarGroup
-        :class="`group-data-[collapsible=icon]:p-0 ${$props.class || ''}`"
-    >
+    <SidebarGroup :class="cn('group-data-[collapsible=icon]:p-0', props.class)">
         <SidebarGroupContent>
             <SidebarMenu>
                 <SidebarMenuItem v-for="item in items" :key="item.title">

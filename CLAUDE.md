@@ -1,5 +1,6 @@
 # Laravel template
 
+- This project is for single-user. No need to fix user_id keys on any data.
 - Always use available project (or fallback global) subagents to perform tasks corresponding to their skills.
 
 ## Structure

@@ -16,11 +16,11 @@ type Props = {
     user: User;
 };
 
+defineProps<Props>();
+
 const handleLogout = () => {
     router.flushAll();
 };
-
-defineProps<Props>();
 </script>
 
 <template>
@@ -35,7 +35,7 @@ defineProps<Props>();
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">
             <Link class="block w-full cursor-pointer" :href="edit()" prefetch>
-                <Settings class="mr-2 h-4 w-4" />
+                <Settings class="mr-2 size-4" />
                 Settings
             </Link>
         </DropdownMenuItem>
@@ -51,7 +51,7 @@ defineProps<Props>();
             as="button"
             data-test="logout-button"
         >
-            <LogOut class="mr-2 h-4 w-4" />
+            <LogOut class="mr-2 size-4" />
             Log out
         </Link>
     </DropdownMenuItem>

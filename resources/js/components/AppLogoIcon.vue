@@ -6,17 +6,17 @@ defineOptions({
 });
 
 type Props = {
-    className?: HTMLAttributes['class'];
+    class?: HTMLAttributes['class'];
 };
 
-defineProps<Props>();
+const props = defineProps<Props>();
 </script>
 
 <template>
     <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 40 42"
-        :class="className"
+        :class="props.class"
         v-bind="$attrs"
     >
         <path

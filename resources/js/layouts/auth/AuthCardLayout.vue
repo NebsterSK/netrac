@@ -8,7 +8,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { home } from '@/routes';
+import { login } from '@/routes';
 
 defineProps<{
     title?: string;
@@ -22,10 +22,10 @@ defineProps<{
     >
         <div class="flex w-full max-w-md flex-col gap-6">
             <Link
-                :href="home()"
+                :href="login()"
                 class="flex items-center gap-2 self-center font-medium"
             >
-                <div class="flex h-9 w-9 items-center justify-center">
+                <div class="flex size-9 items-center justify-center">
                     <AppLogoIcon
                         class="size-9 fill-current text-black dark:text-white"
                     />

@@ -1,3 +1,4 @@
+import type { Page, Router } from '@inertiajs/core';
 import type { Auth } from '@/types/auth';
 
 // Extend ImportMeta interface for Vite...
@@ -26,8 +27,7 @@ declare module '@inertiajs/core' {
 
 declare module 'vue' {
     interface ComponentCustomProperties {
-        $inertia: typeof Router;
+        $inertia: Router;
         $page: Page;
-        $headManager: ReturnType<typeof createHeadManager>;
     }
 }

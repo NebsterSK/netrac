@@ -15,9 +15,9 @@ class MonthlyBalanceSeeder extends Seeder
     {
         $start = Carbon::now()->subMonths(23)->startOfMonth();
 
-        for ($i = 0; $i < 24; $i++) {
+        for ($month = 0; $month < 24; $month++) {
             MonthlyBalance::factory()->create([
-                'date' => $start->copy()->addMonths($i),
+                'date' => $start->copy()->addMonths($month),
             ]);
         }
     }

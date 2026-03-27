@@ -17,6 +17,7 @@ class MonthlyBalance extends Model
     {
         return [
             'date' => 'date',
+            'amount' => 'integer',
         ];
     }
 }
