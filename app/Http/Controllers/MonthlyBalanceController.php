@@ -13,7 +13,7 @@ class MonthlyBalanceController extends Controller
 {
     public function index(): Response
     {
-        $balances = MonthlyBalance::orderBy('date', 'desc')->get();
+        $balances = MonthlyBalance::orderBy('date', 'desc')->limit(18)->get();
 
         return Inertia::render('MonthlyBalance', [
             'balances' => $balances,

@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
+import type { TooltipItem } from 'chart.js';
+import {
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend,
+    LinearScale,
+    Title,
+    Tooltip as ChartTooltip,
+} from 'chart.js';
 import { ArrowUp, ChevronLeft, ChevronRight, EllipsisVertical, MessageSquare, Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import { Bar } from 'vue-chartjs';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -126,6 +137,79 @@ const groupedByYear = computed(() => {
         .sort(([yearA], [yearB]) => Number(yearB) - Number(yearA));
 });
 
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartTooltip, Legend);
+
+const sortedBalances = computed(() =>
+    [...props.balances].sort((balA, balB) => new Date(balA.date).getTime() - new Date(balB.date).getTime()),
+);
+
+const chartData = computed(() => {
+    const sorted = sortedBalances.value;
+    const labels = sorted.map((bal) => {
+        const date = new Date(bal.date);
+        if (date.getMonth() === 0) {
+            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        }
+        return date.toLocaleDateString('en-US', { month: 'short' });
+    });
+    const amounts = sorted.map((bal) => bal.amount);
+
+    return {
+        labels,
+        datasets: [
+            {
+                label: 'Balance',
+                data: amounts,
+                backgroundColor: amounts.map((val) =>
+                    val >= 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
+                ),
+                borderColor: amounts.map((val) =>
+                    val >= 0 ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)',
+                ),
+                borderWidth: 1,
+                borderRadius: 4,
+            },
+        ],
+    };
+});
+
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            display: false,
+        },
+        tooltip: {
+            callbacks: {
+                label: (context: TooltipItem<'bar'>) => {
+                    const value = context.parsed.y ?? 0;
+                    const sign = value >= 0 ? '+' : '−';
+                    return ` ${sign}${Math.abs(value).toLocaleString('fr-FR')}`;
+                },
+            },
+        },
+    },
+    scales: {
+        y: {
+            grid: {
+                color: 'rgba(128, 128, 128, 0.1)',
+            },
+            ticks: {
+                callback: (value: number | string) => {
+                    const num = Number(value);
+                    return `${num >= 0 ? '+' : '−'}${Math.abs(num).toLocaleString('fr-FR')}`;
+                },
+            },
+        },
+        x: {
+            grid: {
+                display: false,
+            },
+        },
+    },
+};
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dashboard',
@@ -235,7 +319,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <CardTitle>Chart</CardTitle>
                 </CardHeader>
 
-                <CardContent> </CardContent>
+                <CardContent class="flex-1 min-h-0">
+                    <div v-if="balances.length >= 2" class="h-full">
+                        <Bar :data="chartData" :options="chartOptions" />
+                    </div>
+
+                    <p v-else class="text-muted-foreground text-center text-sm">
+                        Add at least 2 balance entries to see the chart.
+                    </p>
+                </CardContent>
             </Card>
         </div>
 

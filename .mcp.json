@@ -13,13 +13,13 @@
                 "C:/Users/Lukas/.config/herd/bin/herd-mcp.phar"
             ],
             "env": {
-                "SITE_PATH": "E:\\webs\\template"
+                "SITE_PATH": "E:\\webs\\netrac"
             }
         },
         "instruckt": {
             "command": "php",
             "args": [
-                "E:\\webs\\template\\artisan",
+                "E:\\webs\\netrac\\artisan",
                 "mcp:start",
                 "instruckt"
             ]
