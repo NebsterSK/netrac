@@ -110,7 +110,7 @@ const selectedMonth = computed(() => parseInt(form.date.split('-')[1]));
 function isMonthDisabled(month: number): boolean {
     const key = `${pickerYear.value}-${String(month).padStart(2, '0')}`;
 
-    return props.existingDates.includes(key);
+    return props.existingDates.some((date) => date.startsWith(key));
 }
 
 function selectMonth(month: number) {
@@ -156,6 +156,14 @@ function formatAmount(amount: number): string {
 function getYear(date: string): number {
     return new Date(date).getFullYear();
 }
+
+const averageBalance = computed(() => {
+    if (props.balances.length === 0) return 0;
+
+    const total = props.balances.reduce((sum, bal) => sum + bal.amount, 0);
+
+    return Math.round(total / props.balances.length);
+});
 
 const groupedByYear = computed(() => {
     const groups: Record<number, Balance[]> = {};
@@ -292,12 +300,31 @@ const breadcrumbs: BreadcrumbItem[] = [
                             class="cursor-pointer"
                             @click="openCreate()"
                         >
-                            <Plus class="size-4" />
+                            <Plus class="size-3" />
                         </Button>
                     </CardAction>
                 </CardHeader>
 
                 <CardContent>
+                    <div
+                        v-if="balances.length"
+                        class="mb-3 flex items-center justify-between rounded-md bg-muted/50 px-4 py-2 text-lg"
+                    >
+                        <span>Average</span>
+
+                        <span
+                            class="font-mono font-medium"
+                            :class="
+                                averageBalance >= 0
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : 'text-red-600 dark:text-red-400'
+                            "
+                        >
+                            {{ averageBalance >= 0 ? '+' : '−'
+                            }}{{ formatAmount(averageBalance) }}
+                        </span>
+                    </div>
+
                     <table
                         class="w-full text-left text-sm"
                         aria-label="Monthly balance entries"
@@ -348,7 +375,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </td>
 
                                     <td class="px-4 py-3">
-                                        <span class="flex items-center gap-1.5">
+                                        <span class="flex items-center gap-1 text-muted-foreground">
                                             {{ formatMonth(balance.date) }}
 
                                             <TooltipProvider
