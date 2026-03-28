@@ -10,6 +10,7 @@ import TwoFactorRecoveryCodes from '@/components/TwoFactorRecoveryCodes.vue';
 import TwoFactorSetupModal from '@/components/TwoFactorSetupModal.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
@@ -79,6 +80,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                             class="mt-1 block w-full"
                             autocomplete="current-password"
                             placeholder="Current password"
+                            :disabled="processing"
                         />
 
                         <InputError :message="errors.current_password" />
@@ -93,6 +95,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                             class="mt-1 block w-full"
                             autocomplete="new-password"
                             placeholder="New password"
+                            :disabled="processing"
                         />
 
                         <InputError :message="errors.password" />
@@ -109,6 +112,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                             class="mt-1 block w-full"
                             autocomplete="new-password"
                             placeholder="Confirm password"
+                            :disabled="processing"
                         />
 
                         <InputError :message="errors.password_confirmation" />
@@ -119,6 +123,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                             :disabled="processing"
                             data-test="update-password-button"
                         >
+                            <Spinner v-if="processing" />
                             Save password
                         </Button>
 
@@ -172,6 +177,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                             #default="{ processing }"
                         >
                             <Button type="submit" :disabled="processing">
+                                <Spinner v-if="processing" />
                                 Enable 2FA
                             </Button>
                         </Form>
@@ -195,6 +201,7 @@ onUnmounted(() => clearTwoFactorAuthData());
                                 type="submit"
                                 :disabled="processing"
                             >
+                                <Spinner v-if="processing" />
                                 Disable 2FA
                             </Button>
                         </Form>

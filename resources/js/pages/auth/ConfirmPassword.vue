@@ -32,6 +32,7 @@ import { store } from '@/routes/password/confirm';
                         required
                         autocomplete="current-password"
                         autofocus
+                        :disabled="processing"
                     />
 
                     <InputError :message="errors.password" />

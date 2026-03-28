@@ -41,6 +41,7 @@ defineProps<{
                         autocomplete="off"
                         autofocus
                         placeholder="email@example.com"
+                        :disabled="processing"
                     />
 
                     <InputError :message="errors.email" />

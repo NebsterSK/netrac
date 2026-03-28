@@ -8,6 +8,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { edit } from '@/routes/profile';
@@ -62,6 +63,7 @@ const user = computed(() => page.props.auth.user);
                             required
                             autocomplete="name"
                             placeholder="Full name"
+                            :disabled="processing"
                         />
 
                         <InputError class="mt-2" :message="errors.name" />
@@ -79,6 +81,7 @@ const user = computed(() => page.props.auth.user);
                             required
                             autocomplete="username"
                             placeholder="Email address"
+                            :disabled="processing"
                         />
 
                         <InputError class="mt-2" :message="errors.email" />
@@ -109,8 +112,10 @@ const user = computed(() => page.props.auth.user);
                         <Button
                             :disabled="processing"
                             data-test="update-profile-button"
-                            >Save</Button
                         >
+                            <Spinner v-if="processing" />
+                            Save
+                        </Button>
 
                         <Transition
                             enter-active-class="transition ease-in-out"

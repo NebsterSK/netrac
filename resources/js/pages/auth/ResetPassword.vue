@@ -55,6 +55,7 @@ defineProps<{
                         class="mt-1 block w-full"
                         autofocus
                         placeholder="Password"
+                        :disabled="processing"
                     />
 
                     <InputError :message="errors.password" />
@@ -71,6 +72,7 @@ defineProps<{
                         autocomplete="new-password"
                         class="mt-1 block w-full"
                         placeholder="Confirm password"
+                        :disabled="processing"
                     />
 
                     <InputError :message="errors.password_confirmation" />

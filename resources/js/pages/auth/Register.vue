@@ -38,6 +38,7 @@ import { store } from '@/routes/register';
                         autocomplete="name"
                         name="name"
                         placeholder="Full name"
+                        :disabled="processing"
                     />
 
                     <InputError :message="errors.name" />
@@ -54,6 +55,7 @@ import { store } from '@/routes/register';
                         autocomplete="email"
                         name="email"
                         placeholder="email@example.com"
+                        :disabled="processing"
                     />
 
                     <InputError :message="errors.email" />
@@ -69,6 +71,7 @@ import { store } from '@/routes/register';
                         autocomplete="new-password"
                         name="password"
                         placeholder="Password"
+                        :disabled="processing"
                     />
 
                     <InputError :message="errors.password" />
@@ -84,6 +87,7 @@ import { store } from '@/routes/register';
                         autocomplete="new-password"
                         name="password_confirmation"
                         placeholder="Confirm password"
+                        :disabled="processing"
                     />
 
                     <InputError :message="errors.password_confirmation" />

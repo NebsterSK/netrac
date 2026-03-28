@@ -53,6 +53,7 @@ defineProps<{
                         :tabindex="1"
                         autocomplete="email"
                         placeholder="email@example.com"
+                        :disabled="processing"
                     />
 
                     <InputError :message="errors.email" />
@@ -79,6 +80,7 @@ defineProps<{
                         :tabindex="2"
                         autocomplete="current-password"
                         placeholder="Password"
+                        :disabled="processing"
                     />
 
                     <InputError :message="errors.password" />
@@ -86,7 +88,7 @@ defineProps<{
 
                 <div class="flex items-center justify-between">
                     <Label for="remember" class="flex items-center space-x-3">
-                        <Checkbox id="remember" name="remember" :tabindex="3" />
+                        <Checkbox id="remember" name="remember" :tabindex="3" :disabled="processing" />
 
                         <span>Remember me</span>
                     </Label>

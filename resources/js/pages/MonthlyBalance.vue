@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import {
     Tooltip,
@@ -81,14 +82,14 @@ const shortMonths = Array.from({ length: 12 }, (_, idx) =>
 
 const form = useForm({
     date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
-    amount: 0,
+    amount: undefined as number | undefined,
     comment: '',
 });
 
 function openCreate() {
     editingBalance.value = null;
     form.date = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
-    form.amount = 0;
+    form.amount = undefined;
     form.comment = '';
     pickerYear.value = new Date().getFullYear();
     showDialog.value = true;
@@ -291,7 +292,7 @@ const breadcrumbs: BreadcrumbItem[] = [
         >
             <Card>
                 <CardHeader>
-                    <CardTitle>Table</CardTitle>
+                    <CardTitle class="leading-8">Table</CardTitle>
 
                     <CardAction>
                         <Button
@@ -465,7 +466,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <div
                             class="rounded-md border p-3"
                             :class="{
-                                'pointer-events-none opacity-50': isEditing,
+                                'pointer-events-none opacity-50': isEditing || form.processing,
                             }"
                         >
                             <div class="mb-3 flex items-center justify-between">
@@ -523,7 +524,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                             id="balance-amount"
                             v-model="form.amount"
                             type="number"
-                            class="h-14 text-2xl"
+                            class="h-14 text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
+                            :disabled="form.processing"
                         />
 
                         <InputError :message="form.errors.amount" />
@@ -542,6 +544,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                             v-model="form.comment"
                             maxlength="255"
                             rows="4"
+                            :disabled="form.processing"
                         />
 
                         <InputError :message="form.errors.comment" />
@@ -552,6 +555,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                             type="button"
                             variant="outline"
                             class="cursor-pointer"
+                            :disabled="form.processing"
                             @click="showDialog = false"
                         >
                             Cancel
@@ -562,6 +566,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                             class="cursor-pointer"
                             :disabled="form.processing"
                         >
+                            <Spinner v-if="form.processing" />
                             {{ isEditing ? 'Update' : 'Create' }}
                         </Button>
                     </DialogFooter>

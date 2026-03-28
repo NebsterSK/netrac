@@ -298,6 +298,7 @@ watch(
                                     class="w-auto flex-1"
                                     :disabled="processing || code.length < 6"
                                 >
+                                    <Spinner v-if="processing" />
                                     Confirm
                                 </Button>
                             </div>
