@@ -13,12 +13,12 @@ class MonthlyBalanceController extends Controller
 {
     public function index(): Response
     {
-        $existingDates = MonthlyBalance::orderBy('date', 'desc')->get();
-        $balances = $existingDates->take(18);
+        // TODO: Limit 35?
+        $balances = MonthlyBalance::orderBy('date', 'desc')->get();
 
         return Inertia::render('MonthlyBalance', [
             'balances' => $balances,
-            'existingDates' => $existingDates->pluck('date')->toArray(),
+            'existingDates' => $balances->pluck('date')->toArray(),
         ]);
     }
 

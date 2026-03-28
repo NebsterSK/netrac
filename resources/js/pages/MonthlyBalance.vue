@@ -6,7 +6,10 @@ import {
     CategoryScale,
     Chart as ChartJS,
     Legend,
+    LineController,
+    LineElement,
     LinearScale,
+    PointElement,
     Title,
     Tooltip as ChartTooltip,
 } from 'chart.js';
@@ -159,19 +162,24 @@ function getYear(date: string): number {
 }
 
 const averageBalance = computed(() => {
-    if (props.balances.length === 0) return 0;
+    const recent = recentBalances.value;
+    if (recent.length === 0) return 0;
 
-    const total = props.balances.reduce((sum, bal) => sum + bal.amount, 0);
+    const total = recent.reduce((sum, bal) => sum + bal.amount, 0);
 
-    return Math.round(total / props.balances.length);
+    return Math.round(total / recent.length);
 });
 
 const groupedByYear = computed(() => {
     const groups: Record<number, Balance[]> = {};
 
-    for (const balance of props.balances) {
+    for (const balance of recentBalances.value) {
         const year = getYear(balance.date);
         (groups[year] ??= []).push(balance);
+    }
+
+    for (const year in groups) {
+        groups[year].reverse();
     }
 
     return Object.entries(groups).sort(
@@ -183,6 +191,9 @@ ChartJS.register(
     CategoryScale,
     LinearScale,
     BarElement,
+    LineController,
+    LineElement,
+    PointElement,
     Title,
     ChartTooltip,
     Legend,
@@ -195,9 +206,12 @@ const sortedBalances = computed(() =>
     ),
 );
 
+const recentBalances = computed(() => sortedBalances.value.slice(-18));
+
 const chartData = computed(() => {
-    const sorted = sortedBalances.value;
-    const labels = sorted.map((bal) => {
+    const recent = recentBalances.value;
+    const allSorted = sortedBalances.value;
+    const labels = recent.map((bal) => {
         const date = new Date(bal.date);
 
         if (date.getMonth() === 0) {
@@ -209,11 +223,38 @@ const chartData = computed(() => {
 
         return date.toLocaleDateString('en-US', { month: 'short' });
     });
-    const amounts = sorted.map((bal) => bal.amount);
+    const amounts = recent.map((bal) => bal.amount);
+
+    const rollingAverages = recent.map((bal) => {
+        const entryDate = new Date(bal.date);
+        const cutoff = new Date(entryDate);
+        cutoff.setMonth(cutoff.getMonth() - 17);
+
+        const window = allSorted.filter((other) => {
+            const otherDate = new Date(other.date);
+
+            return otherDate >= cutoff && otherDate <= entryDate;
+        });
+
+        const sum = window.reduce((total, entry) => total + entry.amount, 0);
+
+        return Math.round(sum / window.length);
+    });
 
     return {
         labels,
         datasets: [
+            {
+                type: 'line' as const,
+                label: 'Average',
+                data: rollingAverages,
+                borderColor: 'rgb(99, 102, 241)',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                borderWidth: 3,
+                pointRadius: 5,
+                pointHoverRadius: 4,
+                tension: 0,
+            },
             {
                 label: 'Balance',
                 data: amounts,
@@ -237,15 +278,34 @@ const chartOptions = {
     maintainAspectRatio: false,
     plugins: {
         legend: {
-            display: false,
+            display: true,
+            labels: {
+                usePointStyle: true,
+                pointStyle: 'circle',
+                padding: 16,
+            },
         },
         tooltip: {
             callbacks: {
+                title: (items: TooltipItem<'bar'>[]) => {
+                    const bal = recentBalances.value[items[0].dataIndex];
+                    const date = new Date(bal.date);
+
+                    return date.toLocaleDateString('en-US', {
+                        month: 'short',
+                        year: 'numeric',
+                    });
+                },
                 label: (context: TooltipItem<'bar'>) => {
                     const value = context.parsed.y ?? 0;
                     const sign = value >= 0 ? '+' : '−';
+                    const formatted = `${sign}${Math.abs(value).toLocaleString('fr-FR')}`;
 
-                    return ` ${sign}${Math.abs(value).toLocaleString('fr-FR')}`;
+                    if (context.dataset.label === 'Average') {
+                        return ` Avg: ${formatted}`;
+                    }
+
+                    return ` ${formatted}`;
                 },
             },
         },
@@ -437,7 +497,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                 <CardContent class="min-h-0 flex-1">
                     <div v-if="balances.length >= 2" class="h-full">
-                        <Bar :data="chartData" :options="chartOptions" />
+                        <Bar :data="(chartData as any)" :options="chartOptions" />
                     </div>
 
                     <p v-else class="text-center text-sm text-muted-foreground">
