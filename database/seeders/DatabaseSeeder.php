@@ -18,5 +18,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(MonthlyBalanceSeeder::class);
+        $this->call(StatementSeeder::class);
     }
 }

@@ -255,7 +255,7 @@ const chartData = computed(() => {
                 backgroundColor: 'rgba(99, 102, 241, 0.1)',
                 borderWidth: 3,
                 pointRadius: 5,
-                pointHoverRadius: 4,
+                pointHoverRadius: 5,
                 tension: 0,
             },
             {
