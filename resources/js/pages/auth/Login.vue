@@ -88,7 +88,12 @@ defineProps<{
 
                 <div class="flex items-center justify-between">
                     <Label for="remember" class="flex items-center space-x-3">
-                        <Checkbox id="remember" name="remember" :tabindex="3" :disabled="processing" />
+                        <Checkbox
+                            id="remember"
+                            name="remember"
+                            :tabindex="3"
+                            :disabled="processing"
+                        />
 
                         <span>Remember me</span>
                     </Label>

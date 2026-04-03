@@ -163,7 +163,10 @@ function getYear(date: string): number {
 
 const averageBalance = computed(() => {
     const recent = recentBalances.value;
-    if (recent.length === 0) return 0;
+
+    if (recent.length === 0) {
+        return 0;
+    }
 
     const total = recent.reduce((sum, bal) => sum + bal.amount, 0);
 
@@ -436,7 +439,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </td>
 
                                     <td class="px-4 py-3">
-                                        <span class="flex items-center gap-1 text-muted-foreground">
+                                        <span
+                                            class="flex items-center gap-1 text-muted-foreground"
+                                        >
                                             {{ formatMonth(balance.date) }}
 
                                             <TooltipProvider
@@ -497,7 +502,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                 <CardContent class="min-h-0 flex-1">
                     <div v-if="balances.length >= 2" class="h-full">
-                        <Bar :data="(chartData as any)" :options="chartOptions" />
+                        <Bar :data="chartData as any" :options="chartOptions" />
                     </div>
 
                     <p v-else class="text-center text-sm text-muted-foreground">
@@ -526,7 +531,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <div
                             class="rounded-md border p-3"
                             :class="{
-                                'pointer-events-none opacity-50': isEditing || form.processing,
+                                'pointer-events-none opacity-50':
+                                    isEditing || form.processing,
                             }"
                         >
                             <div class="mb-3 flex items-center justify-between">
@@ -584,7 +590,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                             id="balance-amount"
                             v-model="form.amount"
                             type="number"
-                            class="h-14 text-2xl [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
+                            class="h-14 text-2xl [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             :disabled="form.processing"
                         />
 

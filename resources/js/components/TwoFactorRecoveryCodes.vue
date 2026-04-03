@@ -4,7 +4,6 @@ import { Eye, EyeOff, LockKeyhole, RefreshCw } from 'lucide-vue-next';
 import { nextTick, onMounted, ref, useTemplateRef } from 'vue';
 import AlertError from '@/components/AlertError.vue';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
 import {
     Card,
     CardContent,
@@ -12,6 +11,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import { regenerateRecoveryCodes } from '@/routes/two-factor';
 
@@ -79,6 +79,7 @@ onMounted(async () => {
                         :disabled="processing"
                     >
                         <Spinner v-if="processing" />
+
                         <RefreshCw v-else />
                         Regenerate codes
                     </Button>
