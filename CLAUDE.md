@@ -8,21 +8,28 @@
 - This project is located in E:\webs\netrac
 - `.bash_profile` file contains aliases for most important CLI commands (`php`, `composer` and `npm`), use them first before trying to locate them anywhere else in the system.
 
-## Variables
+## Overall
 
 - Do not use single letter variable names. Use simple, short, human-readable variable names.
 
-## Error Handling
+## Back-end
+
+- Use Laravel 13 syntax, models have their fillable properties set by PHP Attribute.
+- Always use FormRequest for validation.
+
+### Error Handling
 
 - All store, update, delete and similar mutating controller actions must be wrapped in a try/catch block catching `Throwable`.
 - Log the error with `exception_message`, `exception_file` and `exception_line` context keys.
 - If logging in authenticated context, log also `user_id`.
 - On catch, redirect back with an `error` flash message for the frontend toast.
 
-## Laravel
+## Front-End
 
-- Use Laravel 13 syntax, models have their fillable properties set by PHP Attribute.
-- Always use FormRequest for validation.
+- Publish new ShadCN Vue components with `npx shadcn-vue@latest add <component>`.
+- On Form submit, wrap form contents in `<fieldset :disabled="processing">` to disable all inputs, and add `<Spinner v-if="processing" />` inside the submit button.
+- Wayfinder route functions (e.g. `login()`, `dashboard()`) return route definition objects `{ url, method }` which Inertia's `<Link>` accepts directly via `:href` — do not use `.url()`.
+- The homepage route is named `index`, not `home`. Wayfinder exports it as `index` from `@/routes`.
 
 ===
 

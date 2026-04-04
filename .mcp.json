@@ -1,28 +1,30 @@
 {
     "mcpServers": {
         "laravel-boost": {
-            "command": "php",
+            "command": "C:/Users/Lukas/.config/herd/bin/php85/php.exe",
             "args": [
                 "artisan",
                 "boost:mcp"
-            ]
+            ],
+            "cwd": "E:/webs/template"
         },
         "herd": {
-            "command": "php",
+            "command": "C:/Users/Lukas/.config/herd/bin/php85/php.exe",
             "args": [
                 "C:/Users/Lukas/.config/herd/bin/herd-mcp.phar"
             ],
             "env": {
-                "SITE_PATH": "E:\\webs\\netrac"
+                "SITE_PATH": "E:\\webs\\template"
             }
         },
         "instruckt": {
-            "command": "php",
+            "command": "C:/Users/Lukas/.config/herd/bin/php85/php.exe",
             "args": [
-                "E:\\webs\\netrac\\artisan",
+                "artisan",
                 "mcp:start",
                 "instruckt"
-            ]
+            ],
+            "cwd": "E:/webs/template"
         }
     }
 }
