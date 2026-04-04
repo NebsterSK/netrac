@@ -224,7 +224,8 @@ const gainPercentByStatementId = computed(() => {
             const prevTotal = statementTotal(sorted[idx - 1]);
             percents[sorted[idx].id] =
                 prevTotal !== 0
-                    ? ((statementTotal(sorted[idx]) - prevTotal) / prevTotal) * 100
+                    ? ((statementTotal(sorted[idx]) - prevTotal) / prevTotal) *
+                      100
                     : null;
         }
     }
@@ -237,7 +238,9 @@ const averageGain = computed(() => {
         (val): val is number => val !== null,
     );
 
-    if (gains.length === 0) return 0;
+    if (gains.length === 0) {
+        return 0;
+    }
 
     return Math.round(gains.reduce((sum, val) => sum + val, 0) / gains.length);
 });
@@ -247,7 +250,9 @@ const averageGainPercent = computed(() => {
         (val): val is number => val !== null,
     );
 
-    if (percents.length === 0) return 0;
+    if (percents.length === 0) {
+        return 0;
+    }
 
     return percents.reduce((sum, val) => sum + val, 0) / percents.length;
 });
@@ -255,11 +260,15 @@ const averageGainPercent = computed(() => {
 type ColumnKey = (typeof columns)[number]['key'];
 
 const columnGainByStatementId = computed(() => {
-    const result: Record<number, Record<ColumnKey, { gain: number; percent: number | null }>> = {};
+    const result: Record<
+        number,
+        Record<ColumnKey, { gain: number; percent: number | null }>
+    > = {};
     const sorted = sortedStatements.value;
 
     for (let idx = 0; idx < sorted.length; idx++) {
-        const entry: Record<string, { gain: number; percent: number | null }> = {};
+        const entry: Record<string, { gain: number; percent: number | null }> =
+            {};
 
         for (const col of columns) {
             if (idx === 0) {
@@ -274,7 +283,10 @@ const columnGainByStatementId = computed(() => {
             }
         }
 
-        result[sorted[idx].id] = entry as Record<ColumnKey, { gain: number; percent: number | null }>;
+        result[sorted[idx].id] = entry as Record<
+            ColumnKey,
+            { gain: number; percent: number | null }
+        >;
     }
 
     return result;
@@ -329,7 +341,9 @@ const chartData = computed(() => {
             label: col.label,
             data: sorted.map((stmt) => stmt[col.key]),
             borderColor: col.color,
-            backgroundColor: col.color.replace('rgb(', 'rgba(').replace(')', ', 0.1)'),
+            backgroundColor: col.color
+                .replace('rgb(', 'rgba(')
+                .replace(')', ', 0.1)'),
             borderWidth: 3,
             pointRadius: 5,
             pointHoverRadius: 5,
@@ -457,7 +471,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 "
                             >
                                 {{ averageGainPercent >= 0 ? '+' : '−'
-                                }}{{ Math.abs(averageGainPercent).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }}%
+                                }}{{
+                                    Math.abs(averageGainPercent).toLocaleString(
+                                        'fr-FR',
+                                        {
+                                            minimumFractionDigits: 1,
+                                            maximumFractionDigits: 1,
+                                        },
+                                    )
+                                }}%
                             </span>
                         </div>
                     </div>
@@ -468,7 +490,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                             aria-label="Net worth statements"
                         >
                             <thead>
-                                <tr class="border-b text-xs text-muted-foreground">
+                                <tr
+                                    class="border-b text-xs text-muted-foreground"
+                                >
                                     <th class="w-0 pl-4"></th>
 
                                     <th class="border-r px-4 py-2">Month</th>
@@ -481,7 +505,11 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         {{ col.label }}
                                     </th>
 
-                                    <th class="border-l bg-muted/50 px-4 py-2 text-right font-semibold">Total</th>
+                                    <th
+                                        class="border-l bg-muted/50 px-4 py-2 text-right font-semibold"
+                                    >
+                                        Total
+                                    </th>
 
                                     <th class="px-4 py-2 text-right">Gain</th>
 
@@ -545,9 +573,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         </td>
 
                                         <td class="border-r px-4 py-3">
-                                            <span
-                                                class="text-muted-foreground"
-                                            >
+                                            <span class="text-muted-foreground">
                                                 {{
                                                     formatMonth(statement.date)
                                                 }}
@@ -559,38 +585,100 @@ const breadcrumbs: BreadcrumbItem[] = [
                                             :key="col.key"
                                             class="px-2 py-3 text-right font-mono"
                                             :class="
-                                                columnGainByStatementId[statement.id][col.key].gain < 0
+                                                columnGainByStatementId[
+                                                    statement.id
+                                                ][col.key].gain < 0
                                                     ? 'text-red-600 dark:text-red-400'
                                                     : ''
                                             "
                                         >
                                             <TooltipProvider
-                                                v-if="columnGainByStatementId[statement.id][col.key].percent !== null"
+                                                v-if="
+                                                    columnGainByStatementId[
+                                                        statement.id
+                                                    ][col.key].percent !== null
+                                                "
                                             >
                                                 <Tooltip>
                                                     <TooltipTrigger as-child>
-                                                        <span class="cursor-default">
-                                                            {{ formatAmount(statement[col.key]) }}
+                                                        <span
+                                                            class="cursor-default"
+                                                        >
+                                                            {{
+                                                                formatAmount(
+                                                                    statement[
+                                                                        col.key
+                                                                    ],
+                                                                )
+                                                            }}
                                                         </span>
                                                     </TooltipTrigger>
 
                                                     <TooltipContent>
                                                         <span
                                                             :class="
-                                                                columnGainByStatementId[statement.id][col.key].gain >= 0
+                                                                columnGainByStatementId[
+                                                                    statement.id
+                                                                ][col.key]
+                                                                    .gain >= 0
                                                                     ? 'text-green-400 dark:text-green-600'
                                                                     : 'text-red-400 dark:text-red-600'
                                                             "
                                                         >
-                                                            {{ columnGainByStatementId[statement.id][col.key].gain >= 0 ? '+' : '−' }}{{ formatAmount(Math.abs(columnGainByStatementId[statement.id][col.key].gain)) }}
-                                                            ({{ columnGainByStatementId[statement.id][col.key].percent! >= 0 ? '+' : '−' }}{{ Math.abs(columnGainByStatementId[statement.id][col.key].percent!).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }}%)
+                                                            {{
+                                                                columnGainByStatementId[
+                                                                    statement.id
+                                                                ][col.key]
+                                                                    .gain >= 0
+                                                                    ? '+'
+                                                                    : '−'
+                                                            }}{{
+                                                                formatAmount(
+                                                                    Math.abs(
+                                                                        columnGainByStatementId[
+                                                                            statement
+                                                                                .id
+                                                                        ][
+                                                                            col
+                                                                                .key
+                                                                        ].gain,
+                                                                    ),
+                                                                )
+                                                            }}
+                                                            ({{
+                                                                columnGainByStatementId[
+                                                                    statement.id
+                                                                ][col.key]
+                                                                    .percent! >=
+                                                                0
+                                                                    ? '+'
+                                                                    : '−'
+                                                            }}{{
+                                                                Math.abs(
+                                                                    columnGainByStatementId[
+                                                                        statement
+                                                                            .id
+                                                                    ][col.key]
+                                                                        .percent!,
+                                                                ).toLocaleString(
+                                                                    'fr-FR',
+                                                                    {
+                                                                        minimumFractionDigits: 1,
+                                                                        maximumFractionDigits: 1,
+                                                                    },
+                                                                )
+                                                            }}%)
                                                         </span>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>
 
                                             <template v-else>
-                                                {{ formatAmount(statement[col.key]) }}
+                                                {{
+                                                    formatAmount(
+                                                        statement[col.key],
+                                                    )
+                                                }}
                                             </template>
                                         </td>
 
@@ -607,15 +695,39 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         <td
                                             class="px-4 py-3 text-right font-mono"
                                             :class="
-                                                gainByStatementId[statement.id] !== null
-                                                    ? gainByStatementId[statement.id]! >= 0
+                                                gainByStatementId[
+                                                    statement.id
+                                                ] !== null
+                                                    ? gainByStatementId[
+                                                          statement.id
+                                                      ]! >= 0
                                                         ? 'text-green-600 dark:text-green-400'
                                                         : 'text-red-600 dark:text-red-400'
                                                     : 'text-muted-foreground'
                                             "
                                         >
-                                            <template v-if="gainByStatementId[statement.id] !== null">
-                                                {{ gainByStatementId[statement.id]! >= 0 ? '+' : '−' }}{{ formatAmount(Math.abs(gainByStatementId[statement.id]!)) }}
+                                            <template
+                                                v-if="
+                                                    gainByStatementId[
+                                                        statement.id
+                                                    ] !== null
+                                                "
+                                            >
+                                                {{
+                                                    gainByStatementId[
+                                                        statement.id
+                                                    ]! >= 0
+                                                        ? '+'
+                                                        : '−'
+                                                }}{{
+                                                    formatAmount(
+                                                        Math.abs(
+                                                            gainByStatementId[
+                                                                statement.id
+                                                            ]!,
+                                                        ),
+                                                    )
+                                                }}
                                             </template>
 
                                             <template v-else>—</template>
@@ -624,15 +736,40 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         <td
                                             class="px-4 py-3 text-right font-mono"
                                             :class="
-                                                gainPercentByStatementId[statement.id] !== null
-                                                    ? gainPercentByStatementId[statement.id]! >= 0
+                                                gainPercentByStatementId[
+                                                    statement.id
+                                                ] !== null
+                                                    ? gainPercentByStatementId[
+                                                          statement.id
+                                                      ]! >= 0
                                                         ? 'text-green-600 dark:text-green-400'
                                                         : 'text-red-600 dark:text-red-400'
                                                     : 'text-muted-foreground'
                                             "
                                         >
-                                            <template v-if="gainPercentByStatementId[statement.id] !== null">
-                                                {{ gainPercentByStatementId[statement.id]! >= 0 ? '+' : '−' }}{{ Math.abs(gainPercentByStatementId[statement.id]!).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }}%
+                                            <template
+                                                v-if="
+                                                    gainPercentByStatementId[
+                                                        statement.id
+                                                    ] !== null
+                                                "
+                                            >
+                                                {{
+                                                    gainPercentByStatementId[
+                                                        statement.id
+                                                    ]! >= 0
+                                                        ? '+'
+                                                        : '−'
+                                                }}{{
+                                                    Math.abs(
+                                                        gainPercentByStatementId[
+                                                            statement.id
+                                                        ]!,
+                                                    ).toLocaleString('fr-FR', {
+                                                        minimumFractionDigits: 1,
+                                                        maximumFractionDigits: 1,
+                                                    })
+                                                }}%
                                             </template>
 
                                             <template v-else>—</template>
@@ -669,7 +806,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                 <CardContent class="min-h-0 flex-1 overflow-hidden">
                     <div v-if="statements.length >= 2" class="h-full">
-                        <Line :data="chartData as any" :options="chartOptions" />
+                        <Line
+                            :data="chartData as any"
+                            :options="chartOptions"
+                        />
                     </div>
 
                     <p v-else class="text-center text-sm text-muted-foreground">
@@ -700,9 +840,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     isEditing || form.processing,
                             }"
                         >
-                            <div
-                                class="mb-3 flex items-center justify-between"
-                            >
+                            <div class="mb-3 flex items-center justify-between">
                                 <Button
                                     type="button"
                                     variant="ghost"
