@@ -3,13 +3,21 @@
 - This project is for single-user. No need to fix user_id keys on any data.
 - Always use available project (or fallback global) subagents to perform tasks corresponding to their skills.
 
-## Structure
+## Claude
 
 - This project is located in E:\webs\netrac
+- `.bash_profile` file contains aliases for most important CLI commands (`php`, `composer` and `npm`), use them first before trying to locate them anywhere else in the system.
 
 ## Variables
 
 - Do not use single letter variable names. Use simple, short, human-readable variable names.
+
+## Error Handling
+
+- All store, update, delete and similar mutating controller actions must be wrapped in a try/catch block catching `Throwable`.
+- Log the error with `exception_message`, `exception_file` and `exception_line` context keys.
+- If logging in authenticated context, log also `user_id`.
+- On catch, redirect back with an `error` flash message for the frontend toast.
 
 ## Laravel
 

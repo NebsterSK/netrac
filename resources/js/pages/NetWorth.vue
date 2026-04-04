@@ -397,6 +397,7 @@ const chartOptions = {
                 color: 'rgba(128, 128, 128, 0.1)',
             },
             ticks: {
+                stepSize: 5000,
                 callback: (value: number | string) =>
                     Number(value).toLocaleString('fr-FR'),
             },

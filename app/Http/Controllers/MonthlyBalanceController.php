@@ -6,8 +6,10 @@ use App\Http\Requests\MonthlyBalance\StoreMonthlyBalanceRequest;
 use App\Http\Requests\MonthlyBalance\UpdateMonthlyBalanceRequest;
 use App\Models\MonthlyBalance;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class MonthlyBalanceController extends Controller
 {
@@ -24,22 +26,52 @@ class MonthlyBalanceController extends Controller
 
     public function store(StoreMonthlyBalanceRequest $request): RedirectResponse
     {
-        MonthlyBalance::create($request->validated());
+        try {
+            MonthlyBalance::create($request->validated());
+        } catch (Throwable $error) {
+            Log::error('Failed to create balance', [
+                'exception_message' => $error->getMessage(),
+                'exception_file' => $error->getFile(),
+                'exception_line' => $error->getLine(),
+            ]);
 
-        return to_route('monthly-balance.index');
+            return back()->with('error', 'Failed to create balance.');
+        }
+
+        return to_route('monthly-balance.index')->with('success', 'Balance created.');
     }
 
     public function update(UpdateMonthlyBalanceRequest $request, MonthlyBalance $monthlyBalance): RedirectResponse
     {
-        $monthlyBalance->update($request->validated());
+        try {
+            $monthlyBalance->update($request->validated());
+        } catch (Throwable $error) {
+            Log::error('Failed to update balance', [
+                'exception_message' => $error->getMessage(),
+                'exception_file' => $error->getFile(),
+                'exception_line' => $error->getLine(),
+            ]);
 
-        return to_route('monthly-balance.index');
+            return back()->with('error', 'Failed to update balance.');
+        }
+
+        return to_route('monthly-balance.index')->with('success', 'Balance updated.');
     }
 
     public function destroy(MonthlyBalance $monthlyBalance): RedirectResponse
     {
-        $monthlyBalance->delete();
+        try {
+            $monthlyBalance->delete();
+        } catch (Throwable $error) {
+            Log::error('Failed to delete balance', [
+                'exception_message' => $error->getMessage(),
+                'exception_file' => $error->getFile(),
+                'exception_line' => $error->getLine(),
+            ]);
 
-        return to_route('monthly-balance.index');
+            return back()->with('error', 'Failed to delete balance.');
+        }
+
+        return to_route('monthly-balance.index')->with('success', 'Balance deleted.');
     }
 }

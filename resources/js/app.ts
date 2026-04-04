@@ -1,7 +1,9 @@
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
-import { createApp, h } from 'vue';
+import { createApp, defineComponent, h, Teleport } from 'vue';
+import { Sonner } from '@/components/ui/sonner';
+import { useFlashToast } from '@/composables/useFlashToast';
 import '../css/app.css';
 import { initializeTheme } from '@/composables/useAppearance';
 import 'virtual:instruckt';
@@ -16,7 +18,19 @@ createInertiaApp({
             import.meta.glob<DefineComponent>('./pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
+        const RootComponent = defineComponent({
+            setup() {
+                useFlashToast();
+            },
+            render() {
+                return [
+                    h(App, props),
+                    h(Teleport, { to: 'body' }, h(Sonner, { position: 'top-right', richColors: true })),
+                ];
+            },
+        });
+
+        createApp(RootComponent)
             .use(plugin)
             .mount(el);
     },

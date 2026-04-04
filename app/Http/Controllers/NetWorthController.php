@@ -6,8 +6,10 @@ use App\Http\Requests\Statement\StoreStatementRequest;
 use App\Http\Requests\Statement\UpdateStatementRequest;
 use App\Models\Statement;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class NetWorthController extends Controller
 {
@@ -23,22 +25,52 @@ class NetWorthController extends Controller
 
     public function store(StoreStatementRequest $request): RedirectResponse
     {
-        Statement::create($request->validated());
+        try {
+            Statement::create($request->validated());
+        } catch (Throwable $error) {
+            Log::error('Failed to create statement', [
+                'exception_message' => $error->getMessage(),
+                'exception_file' => $error->getFile(),
+                'exception_line' => $error->getLine(),
+            ]);
 
-        return to_route('net-worth.index');
+            return back()->with('error', 'Failed to create statement.');
+        }
+
+        return to_route('net-worth.index')->with('success', 'Statement created.');
     }
 
     public function update(UpdateStatementRequest $request, Statement $statement): RedirectResponse
     {
-        $statement->update($request->validated());
+        try {
+            $statement->update($request->validated());
+        } catch (Throwable $error) {
+            Log::error('Failed to update statement', [
+                'exception_message' => $error->getMessage(),
+                'exception_file' => $error->getFile(),
+                'exception_line' => $error->getLine(),
+            ]);
 
-        return to_route('net-worth.index');
+            return back()->with('error', 'Failed to update statement.');
+        }
+
+        return to_route('net-worth.index')->with('success', 'Statement updated.');
     }
 
     public function destroy(Statement $statement): RedirectResponse
     {
-        $statement->delete();
+        try {
+            $statement->delete();
+        } catch (Throwable $error) {
+            Log::error('Failed to delete statement', [
+                'exception_message' => $error->getMessage(),
+                'exception_file' => $error->getFile(),
+                'exception_line' => $error->getLine(),
+            ]);
 
-        return to_route('net-worth.index');
+            return back()->with('error', 'Failed to delete statement.');
+        }
+
+        return to_route('net-worth.index')->with('success', 'Statement deleted.');
     }
 }
