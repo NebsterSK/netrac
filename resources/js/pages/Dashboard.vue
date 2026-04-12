@@ -24,8 +24,16 @@ interface MonthlyAverage {
     count: number;
 }
 
+interface PeriodAverages {
+    last6: number | null;
+    last12: number | null;
+    last18: number | null;
+    overall: number | null;
+}
+
 const props = defineProps<{
     monthlyAverages: MonthlyAverage[];
+    periodAverages: PeriodAverages;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -100,6 +108,13 @@ function formatAmount(amount: number): string {
     const sign = amount >= 0 ? '+' : '−';
     return `${sign}${Math.abs(amount).toLocaleString('fr-FR')}`;
 }
+
+const periods = computed(() => [
+    { key: 'last6', label: 'Last 6 months', value: props.periodAverages.last6 },
+    { key: 'last12', label: 'Last 12 months', value: props.periodAverages.last12 },
+    { key: 'last18', label: 'Last 18 months', value: props.periodAverages.last18 },
+    { key: 'overall', label: 'Overall', value: props.periodAverages.overall },
+]);
 </script>
 
 <template>
@@ -112,7 +127,47 @@ function formatAmount(amount: number): string {
             <div class="grid auto-rows-min gap-4 md:grid-cols-3">
                 <Card class="aspect-video">
                     <CardHeader>
-                        <CardTitle>Monthly Averages</CardTitle>
+                        <CardTitle>Average Balance</CardTitle>
+                    </CardHeader>
+
+                    <CardContent class="flex-1">
+                        <div class="grid h-full grid-cols-2 gap-3">
+                            <div
+                                v-for="period in periods"
+                                :key="period.key"
+                                class="flex flex-col items-center justify-center rounded-md bg-muted/50"
+                            >
+                                <span
+                                    class="font-mono text-lg font-semibold"
+                                    :class="
+                                        period.value !== null &&
+                                        period.value >= 0
+                                            ? 'text-green-600 dark:text-green-400'
+                                            : period.value !== null
+                                              ? 'text-red-600 dark:text-red-400'
+                                              : 'text-muted-foreground'
+                                    "
+                                >
+                                    {{
+                                        period.value !== null
+                                            ? formatAmount(period.value)
+                                            : '—'
+                                    }}
+                                </span>
+
+                                <span
+                                    class="mt-1 text-xs text-muted-foreground"
+                                >
+                                    {{ period.label }}
+                                </span>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card class="aspect-video">
+                    <CardHeader>
+                        <CardTitle>Monthly Balance Averages</CardTitle>
                     </CardHeader>
 
                     <CardContent class="flex-1">
@@ -181,12 +236,6 @@ function formatAmount(amount: number): string {
                         </div>
                     </CardContent>
                 </Card>
-
-                <div
-                    class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-                >
-                    <PlaceholderPattern />
-                </div>
 
                 <div
                     class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
