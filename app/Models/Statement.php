@@ -13,8 +13,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon $date
  * @property int $account
  * @property int $legacy_upgrade
- * @property int $uniqua_sds
- * @property int $uniqua_dds
+ * @property int $uniqa_sds
+ * @property int $uniqa_dds
  * @property int $finax
  * @property int $trading212
  * @property Carbon|null $created_at
@@ -31,13 +31,13 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereLegacyUpgrade($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereTrading212($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUniquaDds($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUniquaSds($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUniqaDds($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUniqaSds($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUpdatedAt($value)
  *
  * @mixin \Eloquent
  */
-#[Fillable(['date', 'account', 'legacy_upgrade', 'uniqua_sds', 'uniqua_dds', 'finax', 'trading212'])]
+#[Fillable(['date', 'account', 'legacy_upgrade', 'uniqa_sds', 'uniqa_dds', 'finax', 'trading212'])]
 class Statement extends Model
 {
     /** @use HasFactory<StatementFactory> */
@@ -49,8 +49,8 @@ class Statement extends Model
             'date' => 'date',
             'account' => 'integer',
             'legacy_upgrade' => 'integer',
-            'uniqua_sds' => 'integer',
-            'uniqua_dds' => 'integer',
+            'uniqa_sds' => 'integer',
+            'uniqa_dds' => 'integer',
             'finax' => 'integer',
             'trading212' => 'integer',
         ];

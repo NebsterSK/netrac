@@ -12,8 +12,8 @@ class StatementSeeder extends Seeder
     {
         $account = 5000;
         $legacyUpgrade = 3000;
-        $uniquaSds = 2000;
-        $uniquaDds = 1500;
+        $uniqaSds = 2000;
+        $uniqaDds = 1500;
         $finax = 4000;
         $trading212 = 2500;
 
@@ -26,8 +26,8 @@ class StatementSeeder extends Seeder
                 'date' => $date->toDateString(),
                 'account' => $account += rand(80, 150) * (rand(1, 5) === 1 ? -1 : 1),
                 'legacy_upgrade' => $legacyUpgrade += rand(50, 120) * (rand(1, 5) === 1 ? -1 : 1),
-                'uniqua_sds' => $uniquaSds += rand(40, 100) * (rand(1, 5) === 1 ? -1 : 1),
-                'uniqua_dds' => $uniquaDds += rand(30, 90) * (rand(1, 5) === 1 ? -1 : 1),
+                'uniqa_sds' => $uniqaSds += rand(40, 100) * (rand(1, 5) === 1 ? -1 : 1),
+                'uniqa_dds' => $uniqaDds += rand(30, 90) * (rand(1, 5) === 1 ? -1 : 1),
                 'finax' => $finax += rand(60, 130) * (rand(1, 5) === 1 ? -1 : 1),
                 'trading212' => $trading212 += rand(70, 140) * (rand(1, 5) === 1 ? -1 : 1),
             ]);

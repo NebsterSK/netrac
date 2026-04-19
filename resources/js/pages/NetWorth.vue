@@ -64,8 +64,8 @@ interface Statement {
     date: string;
     account: number;
     legacy_upgrade: number;
-    uniqua_sds: number;
-    uniqua_dds: number;
+    uniqa_sds: number;
+    uniqa_dds: number;
     finax: number;
     trading212: number;
 }
@@ -73,8 +73,8 @@ interface Statement {
 const columns = [
     { key: 'account', label: 'Account', color: 'rgb(156, 163, 175)' },
     { key: 'legacy_upgrade', label: 'Legacy Upgrade', color: 'rgb(5, 89, 210)' },
-    { key: 'uniqua_sds', label: 'Uniqua SDS', color: 'rgb(0, 92, 169)' },
-    { key: 'uniqua_dds', label: 'Uniqua DDS', color: 'rgb(0, 92, 169)' },
+    { key: 'uniqa_sds', label: 'Uniqa SDS', color: 'rgb(0, 92, 169)' },
+    { key: 'uniqa_dds', label: 'Uniqa DDS', color: 'rgb(0, 92, 169)' },
     { key: 'finax', label: 'Finax', color: 'rgb(203, 231, 255)' },
     { key: 'trading212', label: 'Trading 212', color: 'rgb(0, 171, 224)' },
 ] as const;
@@ -97,8 +97,8 @@ const form = useForm({
     date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
     account: undefined as number | undefined,
     legacy_upgrade: undefined as number | undefined,
-    uniqua_sds: undefined as number | undefined,
-    uniqua_dds: undefined as number | undefined,
+    uniqa_sds: undefined as number | undefined,
+    uniqa_dds: undefined as number | undefined,
     finax: undefined as number | undefined,
     trading212: undefined as number | undefined,
 });
@@ -108,8 +108,8 @@ function openCreate() {
     form.date = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
     form.account = undefined;
     form.legacy_upgrade = undefined;
-    form.uniqua_sds = undefined;
-    form.uniqua_dds = undefined;
+    form.uniqa_sds = undefined;
+    form.uniqa_dds = undefined;
     form.finax = undefined;
     form.trading212 = undefined;
     pickerYear.value = new Date().getFullYear();
@@ -122,8 +122,8 @@ function openEdit(statement: Statement) {
     form.date = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
     form.account = statement.account;
     form.legacy_upgrade = statement.legacy_upgrade;
-    form.uniqua_sds = statement.uniqua_sds;
-    form.uniqua_dds = statement.uniqua_dds;
+    form.uniqa_sds = statement.uniqa_sds;
+    form.uniqa_dds = statement.uniqa_dds;
     form.finax = statement.finax;
     form.trading212 = statement.trading212;
     pickerYear.value = date.getFullYear();
@@ -183,8 +183,8 @@ function statementTotal(statement: Statement): number {
     return (
         statement.account +
         statement.legacy_upgrade +
-        statement.uniqua_sds +
-        statement.uniqua_dds +
+        statement.uniqa_sds +
+        statement.uniqa_dds +
         statement.finax +
         statement.trading212
     );

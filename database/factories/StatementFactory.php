@@ -19,8 +19,8 @@ class StatementFactory extends Factory
             'date' => fake()->unique()->date(),
             'account' => fake()->numberBetween(0, 10000),
             'legacy_upgrade' => fake()->numberBetween(0, 10000),
-            'uniqua_sds' => fake()->numberBetween(0, 10000),
-            'uniqua_dds' => fake()->numberBetween(0, 10000),
+            'uniqa_sds' => fake()->numberBetween(0, 10000),
+            'uniqa_dds' => fake()->numberBetween(0, 10000),
             'finax' => fake()->numberBetween(0, 10000),
             'trading212' => fake()->numberBetween(0, 10000),
         ];
