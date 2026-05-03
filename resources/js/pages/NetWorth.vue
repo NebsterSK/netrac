@@ -431,7 +431,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[4fr_6fr]">
-            <Card>
+            <Card class="self-start">
                 <CardHeader>
                     <CardTitle class="leading-8">Table</CardTitle>
 
@@ -536,7 +536,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger as-child>
                                                     <button
-                                                        class="flex h-full cursor-pointer items-center opacity-0 transition-opacity group-hover/row:opacity-100"
+                                                        class="flex h-full cursor-pointer items-center"
                                                         aria-label="Actions"
                                                     >
                                                         <EllipsisVertical

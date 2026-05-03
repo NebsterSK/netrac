@@ -353,7 +353,7 @@ const breadcrumbs: BreadcrumbItem[] = [
         <div
             class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,4fr)]"
         >
-            <Card>
+            <Card class="self-start">
                 <CardHeader>
                     <CardTitle class="leading-8">Table</CardTitle>
 
@@ -407,7 +407,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         <DropdownMenu>
                                             <DropdownMenuTrigger as-child>
                                                 <button
-                                                    class="flex h-full cursor-pointer items-center opacity-0 transition-opacity group-hover/row:opacity-100"
+                                                    class="flex h-full cursor-pointer items-center"
                                                     aria-label="Actions"
                                                 >
                                                     <EllipsisVertical
@@ -495,12 +495,12 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card class="sticky top-0 h-[90vh] self-start">
                 <CardHeader>
                     <CardTitle>Chart</CardTitle>
                 </CardHeader>
 
-                <CardContent class="min-h-0 flex-1">
+                <CardContent class="min-h-0 flex-1 overflow-hidden">
                     <div v-if="balances.length >= 2" class="h-full">
                         <Bar :data="chartData as any" :options="chartOptions" />
                     </div>
