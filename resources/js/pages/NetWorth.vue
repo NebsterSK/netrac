@@ -390,6 +390,14 @@ const chartOptions = {
 
                     return ` ${context.dataset.label}: ${value.toLocaleString('fr-FR')}`;
                 },
+                footer: (items: TooltipItem<'line'>[]) => {
+                    const total = items.reduce(
+                        (sum, item) => sum + (item.parsed.y ?? 0),
+                        0,
+                    );
+
+                    return `Total: ${total.toLocaleString('fr-FR')}`;
+                },
             },
         },
     },
