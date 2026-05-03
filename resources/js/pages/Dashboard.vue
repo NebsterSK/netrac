@@ -2,12 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Tooltip,
     TooltipContent,
@@ -69,7 +64,9 @@ const averageByMonth = computed(() => {
 });
 
 const maxAbsAverage = computed(() => {
-    if (props.monthlyAverages.length === 0) return 1;
+    if (props.monthlyAverages.length === 0) {
+        return 1;
+    }
 
     return Math.max(
         ...props.monthlyAverages.map((entry) => Math.abs(entry.average)),
@@ -80,7 +77,9 @@ const maxAbsAverage = computed(() => {
 function heatmapColor(monthIndex: number): string {
     const entry = averageByMonth.value.get(monthIndex);
 
-    if (!entry) return 'bg-muted';
+    if (!entry) {
+        return 'bg-muted';
+    }
 
     const intensity = Math.abs(entry.average) / maxAbsAverage.value;
     const level = Math.ceil(intensity * 4);
@@ -92,6 +91,7 @@ function heatmapColor(monthIndex: number): string {
             'bg-green-400 dark:bg-green-700',
             'bg-green-500 dark:bg-green-600',
         ];
+
         return greens[Math.min(level, 4) - 1] ?? greens[0];
     }
 
@@ -101,18 +101,28 @@ function heatmapColor(monthIndex: number): string {
         'bg-red-400 dark:bg-red-700',
         'bg-red-500 dark:bg-red-600',
     ];
+
     return reds[Math.min(level, 4) - 1] ?? reds[0];
 }
 
 function formatAmount(amount: number): string {
     const sign = amount >= 0 ? '+' : '−';
+
     return `${sign}${Math.abs(amount).toLocaleString('fr-FR')}`;
 }
 
 const periods = computed(() => [
     { key: 'last6', label: 'Last 6 months', value: props.periodAverages.last6 },
-    { key: 'last12', label: 'Last 12 months', value: props.periodAverages.last12 },
-    { key: 'last18', label: 'Last 18 months', value: props.periodAverages.last18 },
+    {
+        key: 'last12',
+        label: 'Last 12 months',
+        value: props.periodAverages.last12,
+    },
+    {
+        key: 'last18',
+        label: 'Last 18 months',
+        value: props.periodAverages.last18,
+    },
     { key: 'overall', label: 'Overall', value: props.periodAverages.overall },
 ]);
 </script>
@@ -193,9 +203,7 @@ const periods = computed(() => [
 
                                     <TooltipContent>
                                         <template
-                                            v-if="
-                                                averageByMonth.has(idx + 1)
-                                            "
+                                            v-if="averageByMonth.has(idx + 1)"
                                         >
                                             <p class="font-mono font-medium">
                                                 {{
@@ -211,14 +219,12 @@ const periods = computed(() => [
                                                 class="text-xs text-muted-foreground"
                                             >
                                                 {{
-                                                    averageByMonth.get(
-                                                        idx + 1,
-                                                    )!.count
+                                                    averageByMonth.get(idx + 1)!
+                                                        .count
                                                 }}
                                                 {{
-                                                    averageByMonth.get(
-                                                        idx + 1,
-                                                    )!.count === 1
+                                                    averageByMonth.get(idx + 1)!
+                                                        .count === 1
                                                         ? 'entry'
                                                         : 'entries'
                                                 }}

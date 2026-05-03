@@ -16,15 +16,6 @@
             "env": {
                 "SITE_PATH": "E:\\webs\\template"
             }
-        },
-        "instruckt": {
-            "command": "C:/Users/Lukas/.config/herd/bin/php85/php.exe",
-            "args": [
-                "artisan",
-                "mcp:start",
-                "instruckt"
-            ],
-            "cwd": "E:/webs/template"
         }
     }
 }

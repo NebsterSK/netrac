@@ -72,7 +72,11 @@ interface Statement {
 
 const columns = [
     { key: 'account', label: 'Account', color: 'rgb(156, 163, 175)' },
-    { key: 'legacy_upgrade', label: 'Legacy Upgrade', color: 'rgb(5, 89, 210)' },
+    {
+        key: 'legacy_upgrade',
+        label: 'Legacy Upgrade',
+        color: 'rgb(5, 89, 210)',
+    },
     { key: 'uniqa_sds', label: 'Uniqa SDS', color: 'rgb(0, 92, 169)' },
     { key: 'uniqa_dds', label: 'Uniqa DDS', color: 'rgb(0, 92, 169)' },
     { key: 'finax', label: 'Finax', color: 'rgb(203, 231, 255)' },

@@ -11,7 +11,7 @@
     "require": {
         "php": "^8.5",
         "ext-pdo": "*",
-        "inertiajs/inertia-laravel": "^2.0",
+        "inertiajs/inertia-laravel": "^3.0",
         "laravel/fortify": "^1.36",
         "laravel/framework": "^13.0",
         "laravel/wayfinder": "^0.1.14"
@@ -20,7 +20,6 @@
         "barryvdh/laravel-debugbar": "^4.0",
         "barryvdh/laravel-ide-helper": "^3.6",
         "fakerphp/faker": "^1.23",
-        "joshcirre/instruckt-laravel": "*",
         "larastan/larastan": "*",
         "laravel/boost": "^2.0",
         "laravel/pint": "^1.25",
@@ -44,15 +43,6 @@
         }
     },
     "scripts": {
-        "dev": [
-            "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names='server,queue,vite'"
-        ],
-        "dev:ssr": [
-            "npm run build:ssr",
-            "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"php artisan inertia:start-ssr\" --names=server,queue,logs,ssr --kill-others"
-        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
@@ -75,6 +65,11 @@
         ],
         "pint": [
             "vendor/bin/pint"
+        ],
+        "resetup": [
+            "@composer install --ansi",
+            "npm install",
+            "@php artisan migrate:fresh --seed"
         ]
     },
     "extra": {
