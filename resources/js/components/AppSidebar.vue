@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { LayoutGrid, TrendingUp, Wallet } from 'lucide-vue-next';
+import { Dumbbell, LayoutGrid, TrendingUp, Wallet } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,6 +15,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import exercise from '@/routes/exercise';
 import monthlyBalance from '@/routes/monthly-balance';
 import netWorth from '@/routes/net-worth';
 import type { NavItem } from '@/types';
@@ -34,6 +35,11 @@ const mainNavItems: NavItem[] = [
         title: 'Net Worth',
         href: netWorth.index(),
         icon: TrendingUp,
+    },
+    {
+        title: 'Exercises',
+        href: exercise.index(),
+        icon: Dumbbell,
     },
 ];
 
