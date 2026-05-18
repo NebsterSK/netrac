@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Dumbbell, LayoutGrid, TrendingUp, Wallet } from 'lucide-vue-next';
+import {
+    ClipboardList,
+    Dumbbell,
+    LayoutGrid,
+    Tags,
+    TrendingUp,
+    Wallet,
+} from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,31 +22,57 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import exercise from '@/routes/exercise';
-import monthlyBalance from '@/routes/monthly-balance';
-import netWorth from '@/routes/net-worth';
-import type { NavItem } from '@/types';
+import monthlyBalance from '@/routes/finance/monthly-balance';
+import netWorth from '@/routes/finance/net-worth';
+import categories from '@/routes/health/categories';
+import exercises from '@/routes/health/exercises';
+import sessions from '@/routes/health/sessions';
+import type { NavGroup, NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const mainNavGroups: NavGroup[] = [
     {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
+        items: [
+            {
+                title: 'Dashboard',
+                href: dashboard(),
+                icon: LayoutGrid,
+            },
+        ],
     },
     {
-        title: 'Monthly Balance',
-        href: monthlyBalance.index(),
-        icon: Wallet,
+        label: 'Finance',
+        items: [
+            {
+                title: 'Monthly Balance',
+                href: monthlyBalance.index(),
+                icon: Wallet,
+            },
+            {
+                title: 'Net Worth',
+                href: netWorth.index(),
+                icon: TrendingUp,
+            },
+        ],
     },
     {
-        title: 'Net Worth',
-        href: netWorth.index(),
-        icon: TrendingUp,
-    },
-    {
-        title: 'Exercises',
-        href: exercise.index(),
-        icon: Dumbbell,
+        label: 'Health',
+        items: [
+            {
+                title: 'Categories',
+                href: categories.index(),
+                icon: Tags,
+            },
+            {
+                title: 'Exercises',
+                href: exercises.index(),
+                icon: Dumbbell,
+            },
+            {
+                title: 'Sessions',
+                href: sessions.index(),
+                icon: ClipboardList,
+            },
+        ],
     },
 ];
 
@@ -67,7 +100,7 @@ const footerNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain :groups="mainNavGroups" />
         </SidebarContent>
 
         <SidebarFooter>

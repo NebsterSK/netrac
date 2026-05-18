@@ -13,18 +13,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
-interface MonthlyAverage {
-    month: number;
-    average: number;
-    count: number;
-}
+type MonthlyAverage = App.Data.Finance.MonthlyAverageData;
 
-interface PeriodAverages {
-    last6: number | null;
-    last12: number | null;
-    last18: number | null;
-    overall: number | null;
-}
+type PeriodAverages = App.Data.Finance.PeriodAveragesData;
 
 const props = defineProps<{
     monthlyAverages: MonthlyAverage[];

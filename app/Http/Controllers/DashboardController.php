@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\MonthlyBalance;
+use App\Data\Finance\MonthlyAverageData;
+use App\Data\Finance\PeriodAveragesData;
+use App\Models\Finance\MonthlyBalance;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -31,8 +33,8 @@ class DashboardController extends Controller
         ];
 
         return Inertia::render('Dashboard', [
-            'monthlyAverages' => $monthlyAverages,
-            'periodAverages' => $periodAverages,
+            'monthlyAverages' => MonthlyAverageData::collect($monthlyAverages),
+            'periodAverages' => PeriodAveragesData::from($periodAverages),
         ]);
     }
 }
