@@ -13,7 +13,7 @@ class UpdateExerciseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'exercise_category_id' => ['required', 'integer', 'exists:exercise_categories,id'],
             'name' => ['required', 'string', 'max:255', Rule::unique('exercises', 'name')->ignore($this->route('exercise'))],
         ];
     }

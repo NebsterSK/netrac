@@ -26,7 +26,7 @@ import { dashboard } from '@/routes';
 import sessionRoutes from '@/routes/health/sessions';
 import type { BreadcrumbItem } from '@/types';
 
-type Category = App.Data.Health.CategoryData;
+type ExerciseCategory = App.Data.Health.ExerciseCategoryData;
 
 type Exercise = App.Data.Health.ExerciseData;
 
@@ -55,16 +55,16 @@ const selectedExercises = computed(() =>
 );
 
 const exercisesByCategory = computed(() => {
-    const groups = new Map<number, { category: Category; items: Exercise[] }>();
+    const groups = new Map<number, { category: ExerciseCategory; items: Exercise[] }>();
 
     for (const exercise of props.exercises) {
-        const group = groups.get(exercise.category.id);
+        const group = groups.get(exercise.exerciseCategory.id);
 
         if (group) {
             group.items.push(exercise);
         } else {
-            groups.set(exercise.category.id, {
-                category: exercise.category,
+            groups.set(exercise.exerciseCategory.id, {
+                category: exercise.exerciseCategory,
                 items: [exercise],
             });
         }
@@ -161,7 +161,11 @@ function randomize() {
         picked.push(...remaining);
     }
 
-    form.exercise_ids = picked;
+    form.exercise_ids = picked.sort(
+        (idA, idB) =>
+            (exercisesById.value.get(idA)?.exerciseCategory.priority ?? 0) -
+            (exercisesById.value.get(idB)?.exerciseCategory.priority ?? 0),
+    );
 }
 
 function submitForm() {
@@ -293,7 +297,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         variant="secondary"
                                         class="mt-1 w-fit text-xs"
                                     >
-                                        {{ exercise.category.name }}
+                                        {{ exercise.exerciseCategory.name }}
                                     </Badge>
                                 </div>
 

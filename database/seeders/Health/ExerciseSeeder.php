@@ -2,8 +2,9 @@
 
 namespace Database\Seeders\Health;
 
-use App\Models\Health\Category;
+use App\Enums\Health\ExerciseCategory as ExerciseCategoryEnum;
 use App\Models\Health\Exercise;
+use App\Models\Health\ExerciseCategory;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -14,19 +15,20 @@ class ExerciseSeeder extends Seeder
     public function run(): void
     {
         $exercisesByCategory = [
-            'Chest' => ['Bench Press', 'Incline Dumbbell Press', 'Push Up', 'Cable Fly'],
-            'Legs' => ['Back Squat', 'Romanian Deadlift', 'Leg Press', 'Walking Lunge'],
-            'Back' => ['Deadlift', 'Pull Up', 'Barbell Row', 'Lat Pulldown'],
-            'Core' => ['Plank', 'Hanging Leg Raise', 'Cable Crunch', 'Russian Twist'],
-            'Cardio' => ['Running', 'Cycling', 'Jump Rope', 'Rowing'],
+            ExerciseCategoryEnum::Chest->value => ['Bench Press', 'Incline Dumbbell Press', 'Cable Fly'],
+            ExerciseCategoryEnum::Legs->value => ['Back Squat', 'Romanian Deadlift', 'Leg Press'],
+            ExerciseCategoryEnum::Back->value => ['Deadlift', 'Pull Up', 'Barbell Row'],
+            ExerciseCategoryEnum::Core->value => ['Plank', 'Hanging Leg Raise', 'Cable Crunch'],
+            ExerciseCategoryEnum::Cardio->value => ['Running', 'Cycling', 'Rowing'],
+            ExerciseCategoryEnum::Arms->value => ['Bicep Curl', 'Tricep Pushdown', 'Hammer Curl'],
         ];
 
         foreach ($exercisesByCategory as $categoryName => $exerciseNames) {
-            $category = Category::factory()->create(['name' => $categoryName]);
+            $category = ExerciseCategory::where('name', $categoryName)->firstOrFail();
 
             foreach ($exerciseNames as $exerciseName) {
                 Exercise::factory()->create([
-                    'category_id' => $category->id,
+                    'exercise_category_id' => $category->id,
                     'name' => $exerciseName,
                 ]);
             }

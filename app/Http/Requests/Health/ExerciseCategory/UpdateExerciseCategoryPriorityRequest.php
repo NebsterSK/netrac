@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Health\Category;
+namespace App\Http\Requests\Health\ExerciseCategory;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreCategoryRequest extends FormRequest
+class UpdateExerciseCategoryPriorityRequest extends FormRequest
 {
     /**
      * @return array<string, array<mixed>>
@@ -12,7 +12,7 @@ class StoreCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', 'unique:categories,name'],
+            'priority' => ['required', 'integer', 'min:1'],
         ];
     }
 }

@@ -24,7 +24,7 @@ import {
 import { dashboard } from '@/routes';
 import monthlyBalance from '@/routes/finance/monthly-balance';
 import netWorth from '@/routes/finance/net-worth';
-import categories from '@/routes/health/categories';
+import exerciseCategories from '@/routes/health/exercise-categories';
 import exercises from '@/routes/health/exercises';
 import sessions from '@/routes/health/sessions';
 import type { NavGroup, NavItem } from '@/types';
@@ -58,8 +58,8 @@ const mainNavGroups: NavGroup[] = [
         label: 'Health',
         items: [
             {
-                title: 'Categories',
-                href: categories.index(),
+                title: 'Exercise Categories',
+                href: exerciseCategories.index(),
                 icon: Tags,
             },
             {

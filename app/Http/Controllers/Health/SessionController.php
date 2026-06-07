@@ -34,7 +34,7 @@ class SessionController extends Controller
 
     public function create(): Response
     {
-        $exercises = Exercise::with('category')->orderBy('name')->get();
+        $exercises = Exercise::with('exerciseCategory')->orderBy('name')->get();
 
         return Inertia::render('health/sessions/Create', [
             'exercises' => ExerciseData::collect($exercises),
@@ -73,7 +73,7 @@ class SessionController extends Controller
 
     public function show(WorkoutSession $session): Response
     {
-        $session->load('exerciseEntries.exercise.category');
+        $session->load('exerciseEntries.exercise.exerciseCategory');
 
         return Inertia::render('health/sessions/Show', [
             'session' => SessionDetailData::fromSession($session),

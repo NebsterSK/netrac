@@ -115,7 +115,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 </span>
 
                                 <Badge variant="secondary" class="text-xs">
-                                    {{ exercise.category.name }}
+                                    {{ exercise.exerciseCategory.name }}
                                 </Badge>
                             </Label>
                         </li>

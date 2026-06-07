@@ -1,4 +1,4 @@
-# Laravel template
+# Netrac
 
 ## Claude
 
@@ -26,6 +26,18 @@
 - After adding or changing a DTO, run `php artisan typescript:transform` to regenerate `resources/js/generated/generated.d.ts`. Generator config lives in `app/Providers/TypeScriptTransformerServiceProvider.php`.
 - Do NOT use laravel-data's `DataTypeScriptTransformer` (it targets typescript-transformer v2 and breaks on the installed v3). Use the v3-native `AttributedClassTransformer` plus `->replaceType(\Illuminate\Support\Carbon::class, 'string')` for date fields.
 
+### Migrations
+
+- Keep migrations self-contained: do **not** reference enums, models, or other app classes inside a migration. Hardcode any seeded reference values so the migration stays an immutable, dependency-free snapshot (use `DB::table(...)`, not Eloquent models).
+
+### Index / listing pages
+
+- Build list queries with `spatie/laravel-query-builder`: `QueryBuilder::for(Model::class)` + `allowedFilters(...)`, `allowedSorts(...)`, `defaultSort(...)`, `->paginate(20)`. `allowedFilters()` / `allowedSorts()` are **variadic** — pass spread arguments, never an array.
+- Search = `AllowedFilter::partial('column')`; discrete filters = `AllowedFilter::exact('column')` (multi-value: comma-separated input → `whereIn`). Sort by a related column = `AllowedSort::callback()` with a correlated subquery, not a join.
+- Validate the query params with a FormRequest type-hinted on `index()` (e.g. `IndexExerciseRequest`): `filter.*` shapes, `sort` via `Rule::in([...])`, and `page` as `integer|min:1`.
+- Return DTO rows via `SomeData::collect($paginator->getCollection())`, plus a `meta` array (`current_page, last_page, per_page, total, from, to`), the filter options, and the current `filters` + `sort` so the page hydrates from the URL.
+- Mutations (store/update/destroy) on a list screen `return back()` so the active filters/sort/page survive.
+
 ### Error Handling
 
 - All store, update, delete and similar mutating controller actions must be wrapped in a try/catch block catching `Throwable`.
@@ -41,12 +53,19 @@
 - The homepage route is named `index`, not `home`. Wayfinder exports it as `index` from `@/routes`.
 - Consume backend DTOs via the generated global ambient types `App.Data.{Module}.*` (e.g. `type Balance = App.Data.Finance.MonthlyBalanceData;`). Don't hand-write Vue interfaces that duplicate a DTO shape.
 
+### Listing pages
+
+- Sync each filter/sort/page change to the URL with `router.get(url, query, { preserveState: true, preserveScroll: true, replace: true })`, toggling a `loading` ref in `onStart` / `onFinish`.
+- Debounce **only the search input (300ms)**; filters, sort, clear, and pagination apply instantly.
+- Disable controls while loading **except the search input** (disabling it mid-type drops focus) — dim the table body instead.
+- Order filter controls left-to-right to match the table's column order.
+- Multiselect filters use `DropdownMenuCheckboxItem` with `@select.prevent` (keeps the menu open). Provide a Clear-filters button (only when a filter/sort is active), sortable headers with an asc/desc indicator, and pagination ("Showing A–B of N" + prev/next).
+
 ## Tooling
 
-- **Do not run Laravel Pint.** The maintainer runs `vendor/bin/pint` manually. The `pint/core` ruleset is excluded via `config/boost.php` so it should not appear in the laravel-boost-guidelines block below — if it ever reappears, leave it alone and skip invoking `pint` yourself.
-- **Do not run Prettier.** The maintainer runs Prettier manually. Skip invoking `prettier` (or `npm run format` / equivalent) yourself.
-- Run Larastan, ESLint, and the test suite **at most once per prompt**, as the final step before replying. Do not run them after every intermediate edit. The only acceptable reason to rerun is when the previous run failed and you have applied a fix — then rerun once to confirm the fix.
-- When running tests, run only the tests covering the business logic changed on the current branch (use `--filter=` or pass specific test files/directories). Do not run the whole test suite. If unsure which tests are relevant, check `git diff` against the base branch to identify changed code and map it to the corresponding tests.
+- **Do not run Laravel Pint, Larastan, ESLint, or Prettier unless explicitly asked** — the maintainer runs these manually. Do not invoke `vendor/bin/pint`, `vendor/bin/phpstan` / `composer larastan`, `eslint` / `npm run lint`, or `prettier` / `npm run format` as part of your work, not even as a final verification step.
+- The `pint/core` ruleset is excluded via `config/boost.php`, so it should not appear in the laravel-boost-guidelines block below — if it ever reappears, leave it alone.
+- Tests: run only the tests covering the business logic changed on the current branch (use `--filter=` or specific test files), at most once per prompt as the final step. Never run the whole suite. If unsure which tests are relevant, check `git diff` against the base branch.
 
 ## Git
 

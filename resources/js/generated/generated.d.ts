@@ -30,15 +30,18 @@ trading212: number,
 };
 }
 namespace Health {
-export type CategoryData = {
+export type ExerciseCategoryData = {
 id: number,
 name: string,
+priority: number,
 };
 export type ExerciseData = {
 id: number,
 name: string,
-category_id: number,
-category: App.Data.Health.CategoryData,
+exercise_category_id: number,
+exerciseCategory: App.Data.Health.ExerciseCategoryData,
+created_at: string,
+updated_at: string,
 };
 export type SessionDetailData = {
 id: number,
@@ -49,7 +52,7 @@ export type SessionExerciseData = {
 id: number,
 name: string,
 completed: boolean,
-category: App.Data.Health.CategoryData,
+exerciseCategory: App.Data.Health.ExerciseCategoryData,
 };
 export type SessionListItemData = {
 id: number,
@@ -57,6 +60,11 @@ performed_at: string,
 total: number,
 completed: number,
 };
+}
+}
+namespace Enums {
+namespace Health {
+export type ExerciseCategory = 'Chest' | 'Legs' | 'Back' | 'Core' | 'Cardio' | 'Arms';
 }
 }
 }

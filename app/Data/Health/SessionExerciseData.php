@@ -13,7 +13,7 @@ class SessionExerciseData extends Data
         public int $id,
         public string $name,
         public bool $completed,
-        public CategoryData $category,
+        public ExerciseCategoryData $exerciseCategory,
     ) {}
 
     public static function fromEntry(ExerciseWorkoutSession $entry): self
@@ -22,7 +22,7 @@ class SessionExerciseData extends Data
             id: $entry->exercise->id,
             name: $entry->exercise->name,
             completed: $entry->completed,
-            category: CategoryData::from($entry->exercise->category),
+            exerciseCategory: ExerciseCategoryData::from($entry->exercise->exerciseCategory),
         );
     }
 }

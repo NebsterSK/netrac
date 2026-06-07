@@ -2,13 +2,13 @@
 
 namespace Database\Factories\Health;
 
-use App\Models\Health\Category;
+use App\Models\Health\ExerciseCategory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Category>
+ * @extends Factory<ExerciseCategory>
  */
-class CategoryFactory extends Factory
+class ExerciseCategoryFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -19,6 +19,7 @@ class CategoryFactory extends Factory
     {
         return [
             'name' => fake()->unique()->words(asText: true),
+            'priority' => 1,
         ];
     }
 }

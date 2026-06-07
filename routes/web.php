@@ -3,7 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Finance\MonthlyBalanceController;
 use App\Http\Controllers\Finance\NetWorthController;
-use App\Http\Controllers\Health\CategoryController;
+use App\Http\Controllers\Health\ExerciseCategoryController;
 use App\Http\Controllers\Health\ExerciseController;
 use App\Http\Controllers\Health\SessionController;
 use App\Models\Health\WorkoutSession;
@@ -23,7 +23,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('health')->name('health.')->group(function () {
         Route::resource('/exercises', ExerciseController::class)->only(['index', 'store', 'update', 'destroy']);
-        Route::resource('/categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('/exercise-categories', ExerciseCategoryController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['exercise-categories' => 'exerciseCategory']);
+        Route::patch('/exercise-categories/{exerciseCategory}/priority', [ExerciseCategoryController::class, 'updatePriority'])->name('exercise-categories.priority.update');
         Route::resource('/sessions', SessionController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
         Route::patch('/sessions/{session}/exercises/{exercise}', [SessionController::class, 'updateExercise'])->name('sessions.exercises.update');
     });

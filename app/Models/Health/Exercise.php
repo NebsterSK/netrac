@@ -11,33 +11,33 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property int $category_id
+ * @property int $exercise_category_id
  * @property string $name
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read \App\Models\Health\Category $category
+ * @property-read \App\Models\Health\ExerciseCategory $exerciseCategory
  * @method static \Database\Factories\Health\ExerciseFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise query()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise whereCategoryId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise whereExerciseCategoryId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise whereUpdatedAt($value)
  * @mixin \Eloquent
  */
-#[Fillable(['category_id', 'name'])]
+#[Fillable(['exercise_category_id', 'name'])]
 class Exercise extends Model
 {
     /** @use HasFactory<ExerciseFactory> */
     use HasFactory;
 
     /**
-     * @return BelongsTo<Category, $this>
+     * @return BelongsTo<ExerciseCategory, $this>
      */
-    public function category(): BelongsTo
+    public function exerciseCategory(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(ExerciseCategory::class);
     }
 }
