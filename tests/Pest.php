@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -28,3 +29,8 @@ pest()->extend(TestCase::class)
 | global functions to help you to reduce the number of lines of code in your test files.
 |
 */
+
+function verifiedUser(array $attributes = []): User
+{
+    return User::factory()->create($attributes);
+}

@@ -16,11 +16,12 @@ use Illuminate\Support\Carbon;
  * @property Carbon $performed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Collection<int, \App\Models\Health\ExerciseWorkoutSession> $exerciseEntries
+ * @property-read Collection<int, ExerciseWorkoutSession> $exerciseEntries
  * @property-read int|null $exercise_entries_count
- * @property-read \App\Models\Health\ExerciseWorkoutSession|null $pivot
- * @property-read Collection<int, \App\Models\Health\Exercise> $exercises
+ * @property-read ExerciseWorkoutSession|null $pivot
+ * @property-read Collection<int, Exercise> $exercises
  * @property-read int|null $exercises_count
+ *
  * @method static \Database\Factories\Health\WorkoutSessionFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WorkoutSession newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WorkoutSession newQuery()
@@ -29,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WorkoutSession whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WorkoutSession wherePerformedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|WorkoutSession whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 #[Fillable(['performed_at'])]

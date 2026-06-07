@@ -56,18 +56,21 @@ const maxPriority = computed(() =>
 );
 
 const lanes = computed(() =>
-    Array.from({ length: maxPriority.value + addedLevels.value }, (_, index) => {
-        const priority = index + 1;
+    Array.from(
+        { length: maxPriority.value + addedLevels.value },
+        (_, index) => {
+            const priority = index + 1;
 
-        return {
-            priority,
-            categories: props.categories
-                .filter((category) => category.priority === priority)
-                .sort((categoryA, categoryB) =>
-                    categoryA.name.localeCompare(categoryB.name),
-                ),
-        };
-    }),
+            return {
+                priority,
+                categories: props.categories
+                    .filter((category) => category.priority === priority)
+                    .sort((categoryA, categoryB) =>
+                        categoryA.name.localeCompare(categoryB.name),
+                    ),
+            };
+        },
+    ),
 );
 
 function addLevel() {
@@ -245,7 +248,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 draggable="true"
                                 class="flex items-center gap-2 rounded-md border bg-muted/30 py-2 pr-1 pl-2 transition-opacity"
                                 :class="
-                                    draggingId === category.id ? 'opacity-50' : ''
+                                    draggingId === category.id
+                                        ? 'opacity-50'
+                                        : ''
                                 "
                                 @dragstart="onDragStart(category.id, $event)"
                                 @dragend="onDragEnd()"

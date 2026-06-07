@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $comment
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ *
  * @method static \Database\Factories\Finance\MonthlyBalanceFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MonthlyBalance newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MonthlyBalance newQuery()
@@ -25,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MonthlyBalance whereDate($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MonthlyBalance whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MonthlyBalance whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 #[Fillable(['date', 'amount', 'comment'])]

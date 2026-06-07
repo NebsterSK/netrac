@@ -25,7 +25,6 @@ class ExerciseController extends Controller
     public function index(IndexExerciseRequest $request): Response
     {
         $exercises = QueryBuilder::for(Exercise::class)
-            ->with('exerciseCategory')
             ->allowedFilters(
                 AllowedFilter::partial('name'),
                 AllowedFilter::exact('exercise_category_id'),
@@ -44,6 +43,7 @@ class ExerciseController extends Controller
                 }),
             )
             ->defaultSort('name')
+            ->with('exerciseCategory')
             ->paginate(20)
             ->withQueryString();
 

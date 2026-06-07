@@ -15,7 +15,8 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read \App\Models\Health\ExerciseCategory $exerciseCategory
+ * @property-read ExerciseCategory $exerciseCategory
+ *
  * @method static \Database\Factories\Health\ExerciseFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise newQuery()
@@ -25,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Exercise whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 #[Fillable(['exercise_category_id', 'name'])]

@@ -14,7 +14,8 @@ use Illuminate\Support\Carbon;
  * @property bool $completed
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read \App\Models\Health\Exercise $exercise
+ * @property-read Exercise $exercise
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseWorkoutSession newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseWorkoutSession newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseWorkoutSession query()
@@ -25,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseWorkoutSession wherePosition($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseWorkoutSession whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseWorkoutSession whereWorkoutSessionId($value)
+ *
  * @mixin \Eloquent
  */
 class ExerciseWorkoutSession extends Pivot

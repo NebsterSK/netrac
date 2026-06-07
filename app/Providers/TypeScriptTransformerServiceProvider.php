@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Carbon;
+use Spatie\LaravelTypeScriptTransformer\TypeScriptTransformerApplicationServiceProvider as BaseTypeScriptTransformerServiceProvider;
 use Spatie\TypeScriptTransformer\Transformers\AttributedClassTransformer;
 use Spatie\TypeScriptTransformer\Transformers\EnumTransformer;
 use Spatie\TypeScriptTransformer\TypeScriptTransformerConfigFactory;
 use Spatie\TypeScriptTransformer\Writers\GlobalNamespaceWriter;
-use Spatie\LaravelTypeScriptTransformer\TypeScriptTransformerApplicationServiceProvider as BaseTypeScriptTransformerServiceProvider;
 
 class TypeScriptTransformerServiceProvider extends BaseTypeScriptTransformerServiceProvider
 {
@@ -16,8 +18,8 @@ class TypeScriptTransformerServiceProvider extends BaseTypeScriptTransformerServ
             ->transformer(AttributedClassTransformer::class)
             ->transformer(EnumTransformer::class)
             ->transformDirectories(app_path())
-            ->replaceType(\Illuminate\Support\Carbon::class, 'string')
-            ->replaceType(\Carbon\CarbonImmutable::class, 'string')
+            ->replaceType(Carbon::class, 'string')
+            ->replaceType(CarbonImmutable::class, 'string')
             ->replaceType(\DateTimeInterface::class, 'string')
             ->writer(new GlobalNamespaceWriter('generated.d.ts'));
     }

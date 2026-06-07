@@ -16,8 +16,9 @@ use Illuminate\Support\Carbon;
  * @property int $priority
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Collection<int, \App\Models\Health\Exercise> $exercises
+ * @property-read Collection<int, Exercise> $exercises
  * @property-read int|null $exercises_count
+ *
  * @method static \Database\Factories\Health\ExerciseCategoryFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseCategory newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseCategory newQuery()
@@ -27,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseCategory whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseCategory wherePriority($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExerciseCategory whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 #[Fillable(['name', 'priority'])]

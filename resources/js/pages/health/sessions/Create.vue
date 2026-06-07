@@ -5,12 +5,7 @@ import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Select,
     SelectContent,
@@ -55,7 +50,10 @@ const selectedExercises = computed(() =>
 );
 
 const exercisesByCategory = computed(() => {
-    const groups = new Map<number, { category: ExerciseCategory; items: Exercise[] }>();
+    const groups = new Map<
+        number,
+        { category: ExerciseCategory; items: Exercise[] }
+    >();
 
     for (const exercise of props.exercises) {
         const group = groups.get(exercise.exerciseCategory.id);
@@ -84,11 +82,7 @@ const availableExercises = computed(() =>
 function addExercise(idValue: string) {
     const id = Number(idValue);
 
-    if (
-        Number.isFinite(id) &&
-        id > 0 &&
-        !form.exercise_ids.includes(id)
-    ) {
+    if (Number.isFinite(id) && id > 0 && !form.exercise_ids.includes(id)) {
         form.exercise_ids = [...form.exercise_ids, id];
     }
 }
@@ -265,8 +259,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                             v-if="selectedExercises.length === 0"
                             class="py-6 text-center text-sm text-muted-foreground"
                         >
-                            No exercises selected. Use the picker above or
-                            click Randomize.
+                            No exercises selected. Use the picker above or click
+                            Randomize.
                         </p>
 
                         <ul v-else class="space-y-2">
@@ -275,7 +269,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 :key="exercise.id"
                                 draggable="true"
                                 class="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2 transition-opacity"
-                                :class="draggingIndex === index ? 'opacity-50' : ''"
+                                :class="
+                                    draggingIndex === index ? 'opacity-50' : ''
+                                "
                                 @dragstart="onDragStart(index, $event)"
                                 @dragover.prevent="onDragOver(index)"
                                 @dragend="onDragEnd()"

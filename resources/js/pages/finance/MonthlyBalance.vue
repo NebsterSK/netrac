@@ -60,7 +60,12 @@ import {
 import { useAppearance } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
-import { destroy, index, store, update } from '@/routes/finance/monthly-balance';
+import {
+    destroy,
+    index,
+    store,
+    update,
+} from '@/routes/finance/monthly-balance';
 import type { BreadcrumbItem } from '@/types';
 
 type Balance = App.Data.Finance.MonthlyBalanceData;

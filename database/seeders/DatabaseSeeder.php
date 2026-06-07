@@ -24,6 +24,6 @@ class DatabaseSeeder extends Seeder
         $this->call(MonthlyBalanceSeeder::class);
         $this->call(StatementSeeder::class);
         $this->call(ExerciseSeeder::class);
-        $this->call(WorkoutSessionSeeder::class);
+        //        $this->call(WorkoutSessionSeeder::class);
     }
 }

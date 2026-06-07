@@ -78,7 +78,9 @@ const props = defineProps<{
 }>();
 
 const search = ref(props.filters.name ?? '');
-const selectedCategories = ref<string[]>(props.filters.exercise_category_ids ?? []);
+const selectedCategories = ref<string[]>(
+    props.filters.exercise_category_ids ?? [],
+);
 const sort = ref(props.sort);
 const loading = ref(false);
 
@@ -100,7 +102,11 @@ function applyFilters(page?: number) {
         filter.exercise_category_id = selectedCategories.value.join(',');
     }
 
-    const query: { filter?: Record<string, string>; sort?: string; page?: number } = {};
+    const query: {
+        filter?: Record<string, string>;
+        sort?: string;
+        page?: number;
+    } = {};
 
     if (Object.keys(filter).length > 0) {
         query.filter = filter;
@@ -266,7 +272,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </CardHeader>
 
                 <CardContent class="space-y-4">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div
+                        class="flex flex-col gap-2 sm:flex-row sm:items-center"
+                    >
                         <div class="relative flex-1">
                             <Search
                                 class="absolute top-2.5 left-2.5 size-4 text-muted-foreground"
@@ -460,7 +468,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                                             <DropdownMenuItem
                                                 class="cursor-pointer text-red-600 dark:text-red-400"
-                                                @click="deleteExercise(exercise)"
+                                                @click="
+                                                    deleteExercise(exercise)
+                                                "
                                             >
                                                 <Trash2 class="size-4" />
                                                 Delete

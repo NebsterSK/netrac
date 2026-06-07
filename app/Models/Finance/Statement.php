@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int $trading212
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ *
  * @method static \Database\Factories\Finance\StatementFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement newQuery()
@@ -33,6 +34,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUniqaDds($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUniqaSds($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 #[Fillable(['date', 'account', 'legacy_upgrade', 'uniqa_sds', 'uniqa_dds', 'finax', 'trading212'])]

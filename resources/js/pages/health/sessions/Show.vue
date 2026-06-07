@@ -2,12 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
 import { Badge } from '@/components/ui/badge';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -96,7 +91,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 :model-value="completionState[exercise.id]"
                                 @update:model-value="
                                     (value) =>
-                                        toggleExercise(exercise.id, value === true)
+                                        toggleExercise(
+                                            exercise.id,
+                                            value === true,
+                                        )
                                 "
                             />
 
