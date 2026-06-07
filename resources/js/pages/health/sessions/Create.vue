@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import { GripVertical, Shuffle, Trash2 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,9 +40,11 @@ const form = useForm<{ exercise_ids: number[] }>({
 
 const exercisesById = computed(() => {
     const map = new Map<number, Exercise>();
+
     for (const exercise of props.exercises) {
         map.set(exercise.id, exercise);
     }
+
     return map;
 });
 
@@ -57,6 +59,7 @@ const exercisesByCategory = computed(() => {
 
     for (const exercise of props.exercises) {
         const group = groups.get(exercise.category.id);
+
         if (group) {
             group.items.push(exercise);
         } else {
@@ -103,6 +106,30 @@ function moveExercise(fromIndex: number, toIndex: number) {
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
     form.exercise_ids = next;
+}
+
+const draggingIndex = ref<number | null>(null);
+
+function onDragStart(index: number, event: DragEvent) {
+    draggingIndex.value = index;
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(index));
+    }
+}
+
+function onDragOver(index: number) {
+    if (draggingIndex.value === null || draggingIndex.value === index) {
+        return;
+    }
+
+    moveExercise(draggingIndex.value, index);
+    draggingIndex.value = index;
+}
+
+function onDragEnd() {
+    draggingIndex.value = null;
 }
 
 function randomize() {
@@ -242,18 +269,19 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <li
                                 v-for="(exercise, index) in selectedExercises"
                                 :key="exercise.id"
-                                class="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2"
+                                draggable="true"
+                                class="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2 transition-opacity"
+                                :class="draggingIndex === index ? 'opacity-50' : ''"
+                                @dragstart="onDragStart(index, $event)"
+                                @dragover.prevent="onDragOver(index)"
+                                @dragend="onDragEnd()"
+                                @drop.prevent="onDragEnd()"
                             >
-                                <div class="flex flex-col">
-                                    <button
-                                        type="button"
-                                        class="cursor-pointer text-muted-foreground hover:text-foreground disabled:cursor-default disabled:opacity-30"
-                                        aria-label="Move up"
-                                        :disabled="index === 0"
-                                        @click="moveExercise(index, index - 1)"
-                                    >
-                                        <GripVertical class="size-4" />
-                                    </button>
+                                <div
+                                    class="cursor-grab text-muted-foreground active:cursor-grabbing"
+                                    aria-label="Drag to reorder"
+                                >
+                                    <GripVertical class="size-4" />
                                 </div>
 
                                 <div class="flex flex-1 flex-col">
