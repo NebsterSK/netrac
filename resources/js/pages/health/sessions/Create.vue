@@ -127,15 +127,37 @@ function onDragEnd() {
 }
 
 function randomize() {
-    const target = 6;
-    const shuffledCategories = [...exercisesByCategory.value].sort(
-        () => Math.random() - 0.5,
+    const target = 8;
+
+    // The lowest-priority tier (highest priority number) holds a single
+    // category — reserve one of its exercises for the final slot.
+    const lastTierPriority = props.exercises.reduce(
+        (lowest, exercise) =>
+            Math.max(lowest, exercise.exerciseCategory.priority),
+        0,
     );
+
+    const lastTierExercises = props.exercises.filter(
+        (exercise) => exercise.exerciseCategory.priority === lastTierPriority,
+    );
+
+    const closingExercise =
+        lastTierExercises.length > 0
+            ? lastTierExercises[
+                  Math.floor(Math.random() * lastTierExercises.length)
+              ]
+            : null;
+
+    const bodyTarget = closingExercise ? target - 1 : target;
+
+    const shuffledCategories = exercisesByCategory.value
+        .filter((group) => group.category.priority !== lastTierPriority)
+        .sort(() => Math.random() - 0.5);
 
     const picked: number[] = [];
 
     for (const group of shuffledCategories) {
-        if (picked.length >= target) {
+        if (picked.length >= bodyTarget) {
             break;
         }
 
@@ -145,21 +167,53 @@ function randomize() {
         picked.push(random.id);
     }
 
-    if (picked.length < target) {
+    if (picked.length < bodyTarget) {
         const remaining = props.exercises
-            .filter((exercise) => !picked.includes(exercise.id))
+            .filter(
+                (exercise) =>
+                    exercise.exerciseCategory.priority !== lastTierPriority &&
+                    !picked.includes(exercise.id),
+            )
             .sort(() => Math.random() - 0.5)
-            .slice(0, target - picked.length)
+            .slice(0, bodyTarget - picked.length)
             .map((exercise) => exercise.id);
 
         picked.push(...remaining);
     }
 
-    form.exercise_ids = picked.sort(
-        (idA, idB) =>
-            (exercisesById.value.get(idA)?.exerciseCategory.priority ?? 0) -
-            (exercisesById.value.get(idB)?.exerciseCategory.priority ?? 0),
-    );
+    const pool = picked.map((id) => ({
+        id,
+        categoryId: exercisesById.value.get(id)?.exerciseCategory.id ?? 0,
+        priority: exercisesById.value.get(id)?.exerciseCategory.priority ?? 0,
+    }));
+
+    // Priority ascending (lower number first); stable, so the random pick
+    // order is preserved within a priority band.
+    pool.sort((itemA, itemB) => itemA.priority - itemB.priority);
+
+    const ordered: number[] = [];
+    let lastCategoryId: number | null = null;
+
+    while (pool.length > 0) {
+        // Lowest-priority exercise whose category differs from the previous
+        // one. Falls back to the first remaining item only when every leftover
+        // shares the last category, so a repeat is genuinely unavoidable.
+        let index = pool.findIndex((item) => item.categoryId !== lastCategoryId);
+
+        if (index === -1) {
+            index = 0;
+        }
+
+        const [next] = pool.splice(index, 1);
+        ordered.push(next.id);
+        lastCategoryId = next.categoryId;
+    }
+
+    if (closingExercise) {
+        ordered.push(closingExercise.id);
+    }
+
+    form.exercise_ids = ordered;
 }
 
 function submitForm() {

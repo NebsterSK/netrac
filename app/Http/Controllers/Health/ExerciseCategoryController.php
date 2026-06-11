@@ -28,9 +28,11 @@ class ExerciseCategoryController extends Controller
     public function store(StoreExerciseCategoryRequest $request): RedirectResponse
     {
         try {
+            // A new category forms its own lowest tier so the bottom-most tier
+            // keeps exactly one category (the one randomize places last).
             ExerciseCategory::create([
                 ...$request->validated(),
-                'priority' => ExerciseCategory::max('priority') ?? 1,
+                'priority' => (ExerciseCategory::max('priority') ?? 0) + 1,
             ]);
         } catch (Throwable $error) {
             Log::error('Failed to create exercise category', [
@@ -64,6 +66,16 @@ class ExerciseCategoryController extends Controller
 
     public function updatePriority(UpdateExerciseCategoryPriorityRequest $request, ExerciseCategory $exerciseCategory): RedirectResponse
     {
+        $priorities = ExerciseCategory::query()
+            ->where('id', '!=', $exerciseCategory->id)
+            ->pluck('priority')
+            ->push((int) $request->validated('priority'))
+            ->all();
+
+        if (! $this->lowestTierStaysSingle($priorities)) {
+            return back()->with('error', 'The lowest priority tier must keep exactly one category.');
+        }
+
         try {
             $exerciseCategory->update($request->validated());
         } catch (Throwable $error) {
@@ -81,6 +93,15 @@ class ExerciseCategoryController extends Controller
 
     public function destroy(ExerciseCategory $exerciseCategory): RedirectResponse
     {
+        $remaining = ExerciseCategory::query()
+            ->where('id', '!=', $exerciseCategory->id)
+            ->pluck('priority')
+            ->all();
+
+        if (! $this->lowestTierStaysSingle($remaining)) {
+            return back()->with('error', 'The lowest priority tier must keep exactly one category. Move a category down before deleting this one.');
+        }
+
         try {
             $exerciseCategory->delete();
         } catch (Throwable $error) {
@@ -94,5 +115,22 @@ class ExerciseCategoryController extends Controller
         }
 
         return to_route('health.exercise-categories.index')->with('success', 'Category deleted.');
+    }
+
+    /**
+     * The lowest priority tier (highest priority number) must hold exactly one
+     * category. An empty set is allowed (no tiers to constrain).
+     *
+     * @param  array<int, int>  $priorities
+     */
+    private function lowestTierStaysSingle(array $priorities): bool
+    {
+        if ($priorities === []) {
+            return true;
+        }
+
+        $counts = array_count_values($priorities);
+
+        return $counts[max(array_keys($counts))] === 1;
     }
 }

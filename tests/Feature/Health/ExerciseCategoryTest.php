@@ -40,14 +40,14 @@ it('stores the first category with priority 1 when none exist', function () {
     $this->assertDatabaseHas('exercise_categories', ['name' => 'Shoulders', 'priority' => 1]);
 });
 
-it('stores a new category at the current max priority', function () {
+it('stores a new category as its own lowest tier', function () {
     $maxPriority = ExerciseCategory::max('priority');
 
     $this->actingAs(verifiedUser())
         ->post(route('health.exercise-categories.store'), ['name' => 'Mobility'])
         ->assertSessionHas('success');
 
-    $this->assertDatabaseHas('exercise_categories', ['name' => 'Mobility', 'priority' => $maxPriority]);
+    $this->assertDatabaseHas('exercise_categories', ['name' => 'Mobility', 'priority' => $maxPriority + 1]);
 });
 
 it('requires a unique name on store', function () {
@@ -89,6 +89,19 @@ it('updates a category priority', function () {
     expect($category->refresh()->priority)->toBe(3);
 });
 
+it('rejects a priority move that crowds the lowest tier', function () {
+    ExerciseCategory::query()->delete();
+    $top = ExerciseCategory::factory()->create(['name' => 'Top', 'priority' => 1]);
+    ExerciseCategory::factory()->create(['name' => 'Bottom', 'priority' => 2]);
+
+    $this->actingAs(verifiedUser())
+        ->from(route('health.exercise-categories.index'))
+        ->patch(route('health.exercise-categories.priority.update', $top), ['priority' => 2])
+        ->assertSessionHas('error');
+
+    expect($top->refresh()->priority)->toBe(1);
+});
+
 it('validates the priority value', function () {
     $category = ExerciseCategory::factory()->create();
 
@@ -106,4 +119,18 @@ it('deletes a category', function () {
         ->assertSessionHas('success');
 
     $this->assertModelMissing($category);
+});
+
+it('rejects deleting the lowest category when it would crowd the new lowest tier', function () {
+    ExerciseCategory::query()->delete();
+    ExerciseCategory::factory()->create(['name' => 'A', 'priority' => 1]);
+    ExerciseCategory::factory()->create(['name' => 'B', 'priority' => 1]);
+    $bottom = ExerciseCategory::factory()->create(['name' => 'C', 'priority' => 2]);
+
+    $this->actingAs(verifiedUser())
+        ->from(route('health.exercise-categories.index'))
+        ->delete(route('health.exercise-categories.destroy', $bottom))
+        ->assertSessionHas('error');
+
+    $this->assertModelExists($bottom);
 });

@@ -91,6 +91,59 @@ function onDragEnd() {
     dragOverPriority.value = null;
 }
 
+// The lowest priority tier (the bottom-most occupied lane) always holds exactly
+// one category — it is the one randomize places last in a session. An empty
+// board is allowed (no tiers to constrain).
+function lowestTierHasOne(counts: Map<number, number>): boolean {
+    if (counts.size === 0) {
+        return true;
+    }
+
+    const lowestPriority = Math.max(...counts.keys());
+
+    return counts.get(lowestPriority) === 1;
+}
+
+function keepsSingleLowest(draggedId: number, targetPriority: number): boolean {
+    const counts = new Map<number, number>();
+
+    for (const category of props.categories) {
+        const priority =
+            category.id === draggedId ? targetPriority : category.priority;
+
+        counts.set(priority, (counts.get(priority) ?? 0) + 1);
+    }
+
+    return lowestTierHasOne(counts);
+}
+
+function survivesDelete(deletedId: number): boolean {
+    const counts = new Map<number, number>();
+
+    for (const category of props.categories) {
+        if (category.id === deletedId) {
+            continue;
+        }
+
+        counts.set(
+            category.priority,
+            (counts.get(category.priority) ?? 0) + 1,
+        );
+    }
+
+    return lowestTierHasOne(counts);
+}
+
+function onDragOver(priority: number) {
+    if (draggingId.value !== null && !keepsSingleLowest(draggingId.value, priority)) {
+        dragOverPriority.value = null;
+
+        return;
+    }
+
+    dragOverPriority.value = priority;
+}
+
 function onDrop(priority: number) {
     const id = draggingId.value;
     onDragEnd();
@@ -102,6 +155,10 @@ function onDrop(priority: number) {
     const category = props.categories.find((item) => item.id === id);
 
     if (!category || category.priority === priority) {
+        return;
+    }
+
+    if (!keepsSingleLowest(id, priority)) {
         return;
     }
 
@@ -156,6 +213,14 @@ function submitForm() {
 }
 
 function deleteCategory(category: ExerciseCategory) {
+    if (!survivesDelete(category.id)) {
+        alert(
+            'The lowest priority tier must keep exactly one category. Move a category down to the lowest tier before deleting this one.',
+        );
+
+        return;
+    }
+
     if (!confirm('Are you sure you want to delete this category?')) {
         return;
     }
@@ -225,7 +290,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 ? 'border-primary bg-primary/5'
                                 : 'border-dashed'
                         "
-                        @dragover.prevent="dragOverPriority = lane.priority"
+                        @dragover.prevent="onDragOver(lane.priority)"
                         @drop.prevent="onDrop(lane.priority)"
                     >
                         <div
