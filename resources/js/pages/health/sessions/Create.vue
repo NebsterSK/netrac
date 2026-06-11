@@ -185,6 +185,7 @@ function randomize() {
         id,
         categoryId: exercisesById.value.get(id)?.exerciseCategory.id ?? 0,
         priority: exercisesById.value.get(id)?.exerciseCategory.priority ?? 0,
+        pattern: exercisesById.value.get(id)?.movement_pattern ?? null,
     }));
 
     // Priority ascending (lower number first); stable, so the random pick
@@ -193,12 +194,33 @@ function randomize() {
 
     const ordered: number[] = [];
     let lastCategoryId: number | null = null;
+    let lastPattern: string | null = null;
+
+    // Two non-null exercises clash only when they share the same movement
+    // pattern; nulls (core/cardio) never clash on pattern.
+    const samePattern = (pattern: string | null) =>
+        pattern !== null && pattern === lastPattern;
 
     while (pool.length > 0) {
-        // Lowest-priority exercise whose category differs from the previous
-        // one. Falls back to the first remaining item only when every leftover
-        // shares the last category, so a repeat is genuinely unavoidable.
-        let index = pool.findIndex((item) => item.categoryId !== lastCategoryId);
+        // Prefer the lowest-priority exercise that differs on both pattern and
+        // category; then pattern only; then category only; finally anything.
+        // Pattern is ranked first because that is the adjacency we most want to
+        // avoid (e.g. two pushes back to back).
+        let index = pool.findIndex(
+            (item) =>
+                !samePattern(item.pattern) &&
+                item.categoryId !== lastCategoryId,
+        );
+
+        if (index === -1) {
+            index = pool.findIndex((item) => !samePattern(item.pattern));
+        }
+
+        if (index === -1) {
+            index = pool.findIndex(
+                (item) => item.categoryId !== lastCategoryId,
+            );
+        }
 
         if (index === -1) {
             index = 0;
@@ -207,6 +229,7 @@ function randomize() {
         const [next] = pool.splice(index, 1);
         ordered.push(next.id);
         lastCategoryId = next.categoryId;
+        lastPattern = next.pattern;
     }
 
     if (closingExercise) {

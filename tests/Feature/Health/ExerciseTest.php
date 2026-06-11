@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Health\MovementPattern;
 use App\Models\Health\Exercise;
 use App\Models\Health\ExerciseCategory;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -68,17 +69,48 @@ it('rejects an invalid sort value', function () {
         ->assertSessionHasErrors('sort');
 });
 
-it('stores an exercise', function () {
+it('stores an exercise with a movement pattern', function () {
     $category = ExerciseCategory::factory()->create();
 
     $this->actingAs(verifiedUser())
         ->post(route('health.exercises.store'), [
             'exercise_category_id' => $category->id,
             'name' => 'Deadlift',
+            'movement_pattern' => MovementPattern::Pull->value,
         ])
         ->assertSessionHas('success');
 
-    $this->assertDatabaseHas('exercises', ['name' => 'Deadlift', 'exercise_category_id' => $category->id]);
+    $this->assertDatabaseHas('exercises', [
+        'name' => 'Deadlift',
+        'exercise_category_id' => $category->id,
+        'movement_pattern' => MovementPattern::Pull->value,
+    ]);
+});
+
+it('allows storing an exercise without a movement pattern', function () {
+    $category = ExerciseCategory::factory()->create();
+
+    $this->actingAs(verifiedUser())
+        ->post(route('health.exercises.store'), [
+            'exercise_category_id' => $category->id,
+            'name' => 'Plank',
+        ])
+        ->assertSessionHas('success');
+
+    $this->assertDatabaseHas('exercises', ['name' => 'Plank', 'movement_pattern' => null]);
+});
+
+it('rejects an invalid movement pattern', function () {
+    $category = ExerciseCategory::factory()->create();
+
+    $this->actingAs(verifiedUser())
+        ->from(route('health.exercises.index'))
+        ->post(route('health.exercises.store'), [
+            'exercise_category_id' => $category->id,
+            'name' => 'Weird Move',
+            'movement_pattern' => 'Flop',
+        ])
+        ->assertSessionHasErrors('movement_pattern');
 });
 
 it('validates exercise store input', function () {
@@ -120,11 +152,13 @@ it('updates an exercise', function () {
         ->patch(route('health.exercises.update', $exercise), [
             'exercise_category_id' => $category->id,
             'name' => 'New',
+            'movement_pattern' => MovementPattern::Squat->value,
         ])
         ->assertSessionHas('success');
 
     expect($exercise->refresh()->name)->toBe('New')
-        ->and($exercise->exercise_category_id)->toBe($category->id);
+        ->and($exercise->exercise_category_id)->toBe($category->id)
+        ->and($exercise->movement_pattern)->toBe(MovementPattern::Squat);
 });
 
 it('deletes an exercise', function () {

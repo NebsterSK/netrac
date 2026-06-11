@@ -2,6 +2,7 @@
 
 namespace Database\Factories\Health;
 
+use App\Enums\Health\MovementPattern;
 use App\Models\Health\Exercise;
 use App\Models\Health\ExerciseCategory;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -21,6 +22,7 @@ class ExerciseFactory extends Factory
         return [
             'exercise_category_id' => ExerciseCategory::factory(),
             'name' => fake()->unique()->words(asText: true),
+            'movement_pattern' => fake()->randomElement([...MovementPattern::cases(), null]),
         ];
     }
 }

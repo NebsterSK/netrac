@@ -57,6 +57,14 @@ import type { BreadcrumbItem } from '@/types';
 type ExerciseCategory = App.Data.Health.ExerciseCategoryData;
 type Exercise = App.Data.Health.ExerciseData;
 
+const movementPatternOptions: { value: string; label: string }[] = [
+    { value: 'none', label: 'None' },
+    { value: 'Push', label: 'Push' },
+    { value: 'Pull', label: 'Pull' },
+    { value: 'Squat', label: 'Squat' },
+    { value: 'Hinge', label: 'Hinge' },
+];
+
 interface PaginationMeta {
     current_page: number;
     last_page: number;
@@ -190,6 +198,7 @@ const isEditing = computed(() => editingExercise.value !== null);
 const form = useForm({
     name: '',
     exercise_category_id: '' as string,
+    movement_pattern: 'none' as string,
 });
 
 function openCreate() {
@@ -203,6 +212,7 @@ function openEdit(exercise: Exercise) {
     editingExercise.value = exercise;
     form.name = exercise.name;
     form.exercise_category_id = String(exercise.exercise_category_id);
+    form.movement_pattern = exercise.movement_pattern ?? 'none';
     form.clearErrors();
     showDialog.value = true;
 }
@@ -219,6 +229,8 @@ function submitForm() {
         exercise_category_id: data.exercise_category_id
             ? Number(data.exercise_category_id)
             : null,
+        movement_pattern:
+            data.movement_pattern === 'none' ? null : data.movement_pattern,
     }))[method](url, {
         preserveScroll: true,
         onSuccess: () => {
@@ -431,9 +443,24 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 </td>
 
                                 <td class="px-4 py-3">
-                                    <Badge variant="secondary" class="text-xs">
-                                        {{ exercise.exerciseCategory.name }}
-                                    </Badge>
+                                    <div
+                                        class="flex flex-wrap items-center gap-1"
+                                    >
+                                        <Badge
+                                            variant="secondary"
+                                            class="text-xs"
+                                        >
+                                            {{ exercise.exerciseCategory.name }}
+                                        </Badge>
+
+                                        <Badge
+                                            v-if="exercise.movement_pattern"
+                                            variant="outline"
+                                            class="text-xs"
+                                        >
+                                            {{ exercise.movement_pattern }}
+                                        </Badge>
+                                    </div>
                                 </td>
 
                                 <td class="px-4 py-3 text-muted-foreground">
@@ -582,6 +609,37 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                             <InputError
                                 :message="form.errors.exercise_category_id"
+                            />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label for="exercise-movement-pattern">
+                                Movement pattern
+                            </Label>
+
+                            <Select v-model="form.movement_pattern">
+                                <SelectTrigger
+                                    id="exercise-movement-pattern"
+                                    class="w-full"
+                                >
+                                    <SelectValue
+                                        placeholder="Select a movement pattern"
+                                    />
+                                </SelectTrigger>
+
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="option in movementPatternOptions"
+                                        :key="option.value"
+                                        :value="option.value"
+                                    >
+                                        {{ option.label }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            <InputError
+                                :message="form.errors.movement_pattern"
                             />
                         </div>
 
