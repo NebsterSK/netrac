@@ -3,7 +3,9 @@ import { Link } from '@inertiajs/vue3';
 import {
     ClipboardList,
     Dumbbell,
+    FolderTree,
     LayoutGrid,
+    Receipt,
     Tags,
     TrendingUp,
     Wallet,
@@ -22,6 +24,8 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import expenseCategories from '@/routes/finance/expense-categories';
+import expenses from '@/routes/finance/expenses';
 import monthlyBalance from '@/routes/finance/monthly-balance';
 import netWorth from '@/routes/finance/net-worth';
 import exerciseCategories from '@/routes/health/exercise-categories';
@@ -51,6 +55,16 @@ const mainNavGroups: NavGroup[] = [
                 title: 'Net Worth',
                 href: netWorth.index(),
                 icon: TrendingUp,
+            },
+            {
+                title: 'Expenses',
+                href: expenses.index(),
+                icon: Receipt,
+            },
+            {
+                title: 'Expense Categories',
+                href: expenseCategories.index(),
+                icon: FolderTree,
             },
         ],
     },

@@ -17,9 +17,13 @@ type MonthlyAverage = App.Data.Finance.MonthlyAverageData;
 
 type PeriodAverages = App.Data.Finance.PeriodAveragesData;
 
+type ExpenseCategoryTotal = App.Data.Finance.ExpenseCategoryTotalData;
+
 const props = defineProps<{
     monthlyAverages: MonthlyAverage[];
     periodAverages: PeriodAverages;
+    expenseCategoryTotals: ExpenseCategoryTotal[];
+    expenseTotal: number;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -116,6 +120,18 @@ const periods = computed(() => [
     },
     { key: 'overall', label: 'Overall', value: props.periodAverages.overall },
 ]);
+
+const maxCategoryTotal = computed(() =>
+    Math.max(...props.expenseCategoryTotals.map((entry) => entry.total), 1),
+);
+
+const topExpenseCategories = computed(() =>
+    props.expenseCategoryTotals.slice(0, 4),
+);
+
+function formatPlain(amount: number): string {
+    return amount.toLocaleString('fr-FR');
+}
 </script>
 
 <template>
@@ -234,11 +250,89 @@ const periods = computed(() => [
                     </CardContent>
                 </Card>
 
-                <div
-                    class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-                >
-                    <PlaceholderPattern />
-                </div>
+                <Card class="aspect-video">
+                    <CardHeader>
+                        <CardTitle>Recurring Expenses</CardTitle>
+                    </CardHeader>
+
+                    <CardContent class="flex-1">
+                        <div
+                            v-if="topExpenseCategories.length === 0"
+                            class="flex h-full items-center justify-center text-sm text-muted-foreground"
+                        >
+                            No recurring expenses yet.
+                        </div>
+
+                        <div v-else class="flex h-full flex-col gap-3">
+                            <div
+                                class="flex items-baseline justify-between border-b pb-2"
+                            >
+                                <div>
+                                    <span
+                                        class="font-mono text-xl font-semibold"
+                                    >
+                                        {{ formatPlain(expenseTotal) }}
+                                    </span>
+
+                                    <span
+                                        class="ml-1 text-xs text-muted-foreground"
+                                    >
+                                        / mo
+                                    </span>
+                                </div>
+
+                                <div class="text-right">
+                                    <span
+                                        class="font-mono text-sm text-muted-foreground"
+                                    >
+                                        {{ formatPlain(expenseTotal * 12) }}
+                                    </span>
+
+                                    <span
+                                        class="ml-1 text-xs text-muted-foreground"
+                                    >
+                                        / yr
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div
+                                class="flex flex-1 flex-col justify-center gap-2"
+                            >
+                                <div
+                                    v-for="category in topExpenseCategories"
+                                    :key="category.id"
+                                    class="space-y-1"
+                                >
+                                    <div
+                                        class="flex items-baseline justify-between text-sm"
+                                    >
+                                        <span class="truncate font-medium">
+                                            {{ category.name }}
+                                        </span>
+
+                                        <span
+                                            class="ml-2 font-mono text-muted-foreground"
+                                        >
+                                            {{ formatPlain(category.total) }}
+                                        </span>
+                                    </div>
+
+                                    <div
+                                        class="h-2 overflow-hidden rounded-full bg-muted"
+                                    >
+                                        <div
+                                            class="h-full rounded-full bg-primary transition-all"
+                                            :style="{
+                                                width: `${(category.total / maxCategoryTotal) * 100}%`,
+                                            }"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             <div

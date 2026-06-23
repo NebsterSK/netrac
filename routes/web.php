@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Finance\ExpenseCategoryController;
+use App\Http\Controllers\Finance\ExpenseController;
 use App\Http\Controllers\Finance\MonthlyBalanceController;
 use App\Http\Controllers\Finance\NetWorthController;
 use App\Http\Controllers\Health\ExerciseCategoryController;
@@ -19,6 +21,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('finance')->name('finance.')->group(function () {
         Route::resource('/monthly-balance', MonthlyBalanceController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('/net-worth', NetWorthController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['net-worth' => 'statement']);
+        Route::resource('/expenses', ExpenseController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('/expense-categories', ExpenseCategoryController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['expense-categories' => 'expenseCategory']);
     });
 
     Route::prefix('health')->name('health.')->group(function () {

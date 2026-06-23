@@ -125,17 +125,17 @@ function survivesDelete(deletedId: number): boolean {
             continue;
         }
 
-        counts.set(
-            category.priority,
-            (counts.get(category.priority) ?? 0) + 1,
-        );
+        counts.set(category.priority, (counts.get(category.priority) ?? 0) + 1);
     }
 
     return lowestTierHasOne(counts);
 }
 
 function onDragOver(priority: number) {
-    if (draggingId.value !== null && !keepsSingleLowest(draggingId.value, priority)) {
+    if (
+        draggingId.value !== null &&
+        !keepsSingleLowest(draggingId.value, priority)
+    ) {
         dragOverPriority.value = null;
 
         return;
