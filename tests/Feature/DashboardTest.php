@@ -18,7 +18,8 @@ describe('access control', function () {
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
                 ->has('monthlyAverages')
-                ->has('periodAverages'));
+                ->has('periodAverages')
+                ->has('subscriptions'));
     });
 });
 
@@ -42,22 +43,28 @@ it('computes the overall average from balances', function () {
             ->where('periodAverages.last6', 200));
 });
 
-it('aggregates expense totals by category, highest first', function () {
-    $rent = ExpenseCategory::factory()->create(['name' => 'Rent']);
-    $food = ExpenseCategory::factory()->create(['name' => 'Food']);
+it('returns subscriptions category expenses, highest amount first', function () {
+    $subscriptions = ExpenseCategory::factory()->create(['name' => 'Subscriptions']);
+    $utilities = ExpenseCategory::factory()->create(['name' => 'Utilities']);
 
-    Expense::factory()->create(['expense_category_id' => $rent->id, 'amount' => 800]);
-    Expense::factory()->create(['expense_category_id' => $food->id, 'amount' => 100]);
-    Expense::factory()->create(['expense_category_id' => $food->id, 'amount' => 50]);
+    Expense::factory()->create(['expense_category_id' => $subscriptions->id, 'name' => 'Netflix', 'amount' => 13]);
+    Expense::factory()->create(['expense_category_id' => $subscriptions->id, 'name' => 'YouTube', 'amount' => 20]);
+    Expense::factory()->create(['expense_category_id' => $utilities->id, 'name' => 'Water', 'amount' => 40]);
 
     $this->actingAs(verifiedUser())
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('expenseTotal', 950)
-            ->has('expenseCategoryTotals', 2)
-            ->where('expenseCategoryTotals.0.name', 'Rent')
-            ->where('expenseCategoryTotals.0.total', 800)
-            ->where('expenseCategoryTotals.1.name', 'Food')
-            ->where('expenseCategoryTotals.1.total', 150)
-            ->where('expenseCategoryTotals.1.count', 2));
+            ->has('subscriptions', 2)
+            ->where('subscriptions.0.name', 'YouTube')
+            ->where('subscriptions.0.amount', 20)
+            ->where('subscriptions.1.name', 'Netflix'));
+});
+
+it('returns no subscriptions when the category is absent', function () {
+    $food = ExpenseCategory::factory()->create(['name' => 'Food']);
+    Expense::factory()->create(['expense_category_id' => $food->id]);
+
+    $this->actingAs(verifiedUser())
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page->has('subscriptions', 0));
 });

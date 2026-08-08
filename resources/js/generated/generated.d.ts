@@ -1,16 +1,28 @@
 declare namespace App {
     namespace Data {
+        namespace Buzerlistok {
+            export type GoalData = {
+                id: number;
+                name: string;
+                marks: App.Data.Buzerlistok.MarkData[];
+            };
+            export type MarkData = {
+                marked_on: string;
+                status: App.Enums.Buzerlistok.MarkStatus;
+                comment: string | null;
+            };
+            export type WeekData = {
+                id: number;
+                starts_on: string;
+                days: string[];
+                goals: App.Data.Buzerlistok.GoalData[];
+            };
+        }
         namespace Finance {
             export type ExpenseCategoryData = {
                 id: number;
                 name: string;
                 expenses_count: number | null;
-            };
-            export type ExpenseCategoryTotalData = {
-                id: number;
-                name: string;
-                total: number;
-                count: number;
             };
             export type ExpenseData = {
                 id: number;
@@ -48,6 +60,11 @@ declare namespace App {
                 finax: number;
                 trading212: number;
             };
+            export type SubscriptionExpenseData = {
+                id: number;
+                name: string;
+                amount: number;
+            };
         }
         namespace Health {
             export type ExerciseCategoryData = {
@@ -84,6 +101,9 @@ declare namespace App {
         }
     }
     namespace Enums {
+        namespace Buzerlistok {
+            export type MarkStatus = 'success' | 'partial' | 'na' | 'fail';
+        }
         namespace Health {
             export type ExerciseCategory =
                 | 'Chest'

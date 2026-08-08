@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Buzerlistok\MarkController;
+use App\Http\Controllers\Buzerlistok\WeekController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Finance\ExpenseCategoryController;
 use App\Http\Controllers\Finance\ExpenseController;
@@ -17,6 +19,13 @@ Route::get('/', fn () => redirect()->route('login'));
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+    Route::prefix('buzerlistok')->name('buzerlistok.')->group(function () {
+        Route::get('/', [WeekController::class, 'index'])->name('index');
+        Route::post('/', [WeekController::class, 'store'])->name('store');
+        Route::delete('/{week}', [WeekController::class, 'destroy'])->name('destroy');
+        Route::put('/goals/{goal}/marks', [MarkController::class, 'update'])->name('goals.marks.update');
+    });
 
     Route::prefix('finance')->name('finance.')->group(function () {
         Route::resource('/monthly-balance', MonthlyBalanceController::class)->only(['index', 'store', 'update', 'destroy']);

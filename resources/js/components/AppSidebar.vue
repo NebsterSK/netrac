@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import {
+    ClipboardCheck,
     ClipboardList,
     Dumbbell,
     FolderTree,
@@ -24,6 +25,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import buzerlistok from '@/routes/buzerlistok';
 import expenseCategories from '@/routes/finance/expense-categories';
 import expenses from '@/routes/finance/expenses';
 import monthlyBalance from '@/routes/finance/monthly-balance';
@@ -40,6 +42,12 @@ const mainNavGroups: NavGroup[] = [
                 title: 'Dashboard',
                 href: dashboard(),
                 icon: LayoutGrid,
+            },
+
+            {
+                title: 'Buzerlístek',
+                href: buzerlistok.index(),
+                icon: ClipboardCheck,
             },
         ],
     },

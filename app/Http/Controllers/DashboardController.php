@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Data\Finance\ExpenseCategoryTotalData;
 use App\Data\Finance\MonthlyAverageData;
 use App\Data\Finance\PeriodAveragesData;
+use App\Data\Finance\SubscriptionExpenseData;
 use App\Models\Finance\Expense;
 use App\Models\Finance\MonthlyBalance;
 use Illuminate\Support\Facades\DB;
@@ -34,23 +34,16 @@ class DashboardController extends Controller
             'overall' => $balances->isEmpty() ? null : (int) round($balances->avg()),
         ];
 
-        $expenseCategoryTotals = Expense::query()
-            ->join('expense_categories', 'expense_categories.id', '=', 'expenses.expense_category_id')
-            ->select(
-                'expense_categories.id as id',
-                'expense_categories.name as name',
-                DB::raw('SUM(expenses.amount) as total'),
-                DB::raw('COUNT(*) as count'),
-            )
-            ->groupBy('expense_categories.id', 'expense_categories.name')
-            ->orderByDesc('total')
+        $subscriptions = Expense::query()
+            ->whereRelation('expenseCategory', 'name', 'Subscriptions')
+            ->orderByDesc('amount')
+            ->orderBy('name')
             ->get();
 
         return Inertia::render('Dashboard', [
             'monthlyAverages' => MonthlyAverageData::collect($monthlyAverages),
             'periodAverages' => PeriodAveragesData::from($periodAverages),
-            'expenseCategoryTotals' => ExpenseCategoryTotalData::collect($expenseCategoryTotals),
-            'expenseTotal' => (int) $expenseCategoryTotals->sum('total'),
+            'subscriptions' => SubscriptionExpenseData::collect($subscriptions),
         ]);
     }
 }
