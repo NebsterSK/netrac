@@ -10,7 +10,7 @@ class StoreWeekRequest extends FormRequest
 {
     /**
      * Snap the requested date to the Monday of its week so there is exactly one
-     * buzerlístek per calendar week.
+     * buzerlistok per calendar week.
      */
     protected function prepareForValidation(): void
     {
@@ -45,7 +45,7 @@ class StoreWeekRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'starts_on.unique' => 'A buzerlístek already exists for that week.',
+            'starts_on.unique' => 'A buzerlistok already exists for that week.',
         ];
     }
 }

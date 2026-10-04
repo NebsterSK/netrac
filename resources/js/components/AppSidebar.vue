@@ -45,7 +45,7 @@ const mainNavGroups: NavGroup[] = [
             },
 
             {
-                title: 'Buzerlístek',
+                title: 'Buzerlistok',
                 href: buzerlistok.index(),
                 icon: ClipboardCheck,
             },

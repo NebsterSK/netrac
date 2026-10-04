@@ -155,6 +155,129 @@ describe('painting marks', function () {
     });
 });
 
+describe('editing a week', function () {
+    it('redirects guests away from the edit page', function () {
+        $week = Week::factory()->create();
+
+        $this->get(route('buzerlistok.edit', $week))
+            ->assertRedirect(route('login'));
+    });
+
+    it('redirects guests away from updating', function () {
+        $week = Week::factory()->create();
+
+        $this->put(route('buzerlistok.update', $week), [
+            'starts_on' => '2026-07-06',
+            'goals' => [['id' => null, 'name' => 'Read']],
+        ])->assertRedirect(route('login'));
+
+        expect(Goal::count())->toBe(0);
+    });
+
+    it('renders the edit page', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        Goal::factory()->create(['week_id' => $week->id, 'name' => 'Read']);
+
+        $this->actingAs(verifiedUser())
+            ->get(route('buzerlistok.edit', $week))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('buzerlistok/Edit')
+                ->where('week.id', $week->id)
+                ->where('week.starts_on', '2026-07-06')
+                ->where('week.goals.0.name', 'Read'));
+    });
+
+    it('renames, reorders, adds and removes goals', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        $read = Goal::factory()->create(['week_id' => $week->id, 'name' => 'Read', 'position' => 0]);
+        $exercise = Goal::factory()->create(['week_id' => $week->id, 'name' => 'Exercise', 'position' => 1]);
+        $sugar = Goal::factory()->create(['week_id' => $week->id, 'name' => 'No sugar', 'position' => 2]);
+        Mark::factory()->create(['goal_id' => $read->id, 'marked_on' => '2026-07-06']);
+        Mark::factory()->create(['goal_id' => $sugar->id, 'marked_on' => '2026-07-06']);
+
+        $this->actingAs(verifiedUser())
+            ->put(route('buzerlistok.update', $week), [
+                'starts_on' => '2026-07-06',
+                'goals' => [
+                    ['id' => $exercise->id, 'name' => 'Workout'],
+                    ['id' => $read->id, 'name' => 'Read'],
+                    ['id' => null, 'name' => 'Meditate'],
+                ],
+            ])
+            ->assertRedirect(route('buzerlistok.index'));
+
+        $goals = $week->fresh()->goals;
+
+        expect($goals->pluck('name')->all())->toBe(['Workout', 'Read', 'Meditate']);
+        expect($goals->pluck('position')->all())->toBe([0, 1, 2]);
+        expect($goals[0]->id)->toBe($exercise->id);
+        expect($goals[1]->id)->toBe($read->id);
+        expect(Goal::find($sugar->id))->toBeNull();
+        expect(Mark::count())->toBe(1);
+        expect(Mark::sole()->goal_id)->toBe($read->id);
+    });
+
+    it('moves the week and shifts its marks along', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        $goal = Goal::factory()->create(['week_id' => $week->id]);
+        Mark::factory()->create(['goal_id' => $goal->id, 'marked_on' => '2026-07-08']);
+
+        $this->actingAs(verifiedUser())
+            ->put(route('buzerlistok.update', $week), [
+                'starts_on' => '2026-07-15', // a Wednesday, snaps to 2026-07-13
+                'goals' => [['id' => $goal->id, 'name' => $goal->name]],
+            ])
+            ->assertRedirect();
+
+        expect($week->fresh()->starts_on->toDateString())->toBe('2026-07-13');
+        expect(Mark::sole()->marked_on->toDateString())->toBe('2026-07-15');
+    });
+
+    it('allows keeping the same week start', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        $goal = Goal::factory()->create(['week_id' => $week->id]);
+
+        $this->actingAs(verifiedUser())
+            ->put(route('buzerlistok.update', $week), [
+                'starts_on' => '2026-07-06',
+                'goals' => [['id' => $goal->id, 'name' => 'Renamed']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        expect($goal->fresh()->name)->toBe('Renamed');
+    });
+
+    it('rejects moving onto a week that already exists', function () {
+        Week::factory()->create(['starts_on' => '2026-07-13']);
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        $goal = Goal::factory()->create(['week_id' => $week->id]);
+
+        $this->actingAs(verifiedUser())
+            ->put(route('buzerlistok.update', $week), [
+                'starts_on' => '2026-07-14',
+                'goals' => [['id' => $goal->id, 'name' => $goal->name]],
+            ])
+            ->assertSessionHasErrors('starts_on');
+
+        expect($week->fresh()->starts_on->toDateString())->toBe('2026-07-06');
+    });
+
+    it('rejects goals belonging to another week', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        $foreignGoal = Goal::factory()->create();
+
+        $this->actingAs(verifiedUser())
+            ->put(route('buzerlistok.update', $week), [
+                'starts_on' => '2026-07-06',
+                'goals' => [['id' => $foreignGoal->id, 'name' => 'Hijack']],
+            ])
+            ->assertSessionHasErrors('goals.0.id');
+
+        expect($foreignGoal->fresh()->name)->not->toBe('Hijack');
+    });
+});
+
 describe('deleting a week', function () {
     it('deletes the week and cascades its goals and marks', function () {
         $week = Week::factory()->create();

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     Check,
     Eraser,
     Minus,
     MessageSquareText,
+    Pencil,
     Plus,
     Trash2,
     X,
@@ -49,7 +50,7 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: dashboard(),
     },
     {
-        title: 'Buzerlístek',
+        title: 'Buzerlistok',
         href: buzerlistok.index(),
     },
 ];
@@ -320,7 +321,7 @@ function submitCreate() {
 }
 
 function deleteWeek(week: Week) {
-    if (!confirm('Delete this buzerlístek and all its marks?')) {
+    if (!confirm('Delete this buzerlistok and all its marks?')) {
         return;
     }
 
@@ -362,7 +363,7 @@ function weekRange(week: Week): string {
 </script>
 
 <template>
-    <Head title="Buzerlístek" />
+    <Head title="Buzerlistok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col gap-4 p-4">
@@ -439,16 +440,32 @@ function weekRange(week: Week): string {
                         {{ weekRange(week) }}
                     </CardTitle>
 
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        class="cursor-pointer text-red-600 dark:text-red-400"
-                        aria-label="Delete week"
-                        @click="deleteWeek(week)"
-                    >
-                        <Trash2 class="size-4" />
-                    </Button>
+                    <div class="flex items-center gap-1">
+                        <Button
+                            as-child
+                            variant="ghost"
+                            size="icon-sm"
+                            class="cursor-pointer"
+                        >
+                            <Link
+                                :href="buzerlistok.edit(week.id)"
+                                aria-label="Edit week"
+                            >
+                                <Pencil class="size-4" />
+                            </Link>
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            class="cursor-pointer text-red-600 dark:text-red-400"
+                            aria-label="Delete week"
+                            @click="deleteWeek(week)"
+                        >
+                            <Trash2 class="size-4" />
+                        </Button>
+                    </div>
                 </CardHeader>
 
                 <CardContent class="overflow-x-auto">

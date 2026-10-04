@@ -34,7 +34,7 @@ class MarkController extends Controller
                 ],
             );
         } catch (Throwable $error) {
-            Log::error('Failed to update buzerlístek mark', [
+            Log::error('Failed to update buzerlistok mark', [
                 'exception_message' => $error->getMessage(),
                 'exception_file' => $error->getFile(),
                 'exception_line' => $error->getLine(),
