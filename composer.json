@@ -52,14 +52,14 @@
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
-            "@php artisan ide-helper:models -WR",
+            "@php artisan ide-helper:models -WR --no-interaction",
             "@php artisan boost:update --ansi"
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
         ],
         "models": [
-            "@php artisan ide-helper:models -WR"
+            "@php artisan ide-helper:models -WR --no-interaction"
         ],
         "larastan": [
             "vendor/bin/phpstan analyse"
