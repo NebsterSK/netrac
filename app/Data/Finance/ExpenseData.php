@@ -12,6 +12,7 @@ class ExpenseData extends Data
     public function __construct(
         public int $id,
         public string $name,
+        public ?string $color,
         public int $expense_category_id,
         public int $amount,
         public ExpenseCategoryData $expenseCategory,

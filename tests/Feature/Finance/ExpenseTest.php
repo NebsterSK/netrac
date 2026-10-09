@@ -176,3 +176,60 @@ it('deletes an expense', function () {
 
     $this->assertModelMissing($expense);
 });
+
+describe('color', function () {
+    it('stores an expense color', function () {
+        $category = ExpenseCategory::factory()->create();
+
+        $this->actingAs(verifiedUser())
+            ->post(route('finance.expenses.store'), [
+                'expense_category_id' => $category->id,
+                'name' => 'Netflix',
+                'amount' => 14,
+                'color' => '#e50914',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('expenses', ['name' => 'Netflix', 'color' => '#e50914']);
+    });
+
+    it('updates an expense color', function () {
+        $expense = Expense::factory()->create();
+
+        $this->actingAs(verifiedUser())
+            ->put(route('finance.expenses.update', $expense), [
+                'expense_category_id' => $expense->expense_category_id,
+                'name' => $expense->name,
+                'amount' => $expense->amount,
+                'color' => '#22c55e',
+            ])
+            ->assertSessionHasNoErrors();
+
+        expect($expense->refresh()->color)->toBe('#22c55e');
+    });
+
+    it('rejects an invalid expense color', function () {
+        $category = ExpenseCategory::factory()->create();
+
+        $this->actingAs(verifiedUser())
+            ->from(route('finance.expenses.index'))
+            ->post(route('finance.expenses.store'), [
+                'expense_category_id' => $category->id,
+                'name' => 'Netflix',
+                'amount' => 14,
+                'color' => 'red',
+            ])
+            ->assertSessionHasErrors('color');
+    });
+});
+
+it('exposes expense colors on the dashboard', function () {
+    $category = ExpenseCategory::factory()->create(['color' => '#3b82f6']);
+    Expense::factory()->create(['expense_category_id' => $category->id, 'color' => '#ef4444']);
+
+    $this->actingAs(verifiedUser())
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('expenseCategories.0.color', '#3b82f6')
+            ->where('expenseCategories.0.expenses.0.color', '#ef4444'));
+});

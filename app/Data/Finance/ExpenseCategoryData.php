@@ -11,6 +11,7 @@ class ExpenseCategoryData extends Data
     public function __construct(
         public int $id,
         public string $name,
+        public ?string $color = null,
         public ?int $expenses_count = null,
     ) {}
 }

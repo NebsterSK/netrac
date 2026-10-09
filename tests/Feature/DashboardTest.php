@@ -19,7 +19,7 @@ describe('access control', function () {
                 ->component('Dashboard')
                 ->has('monthlyAverages')
                 ->has('periodAverages')
-                ->has('subscriptions'));
+                ->has('expenseCategories'));
     });
 });
 
@@ -43,9 +43,9 @@ it('computes the overall average from balances', function () {
             ->where('periodAverages.last6', 200));
 });
 
-it('returns subscriptions category expenses, highest amount first', function () {
-    $subscriptions = ExpenseCategory::factory()->create(['name' => 'Subscriptions']);
-    $utilities = ExpenseCategory::factory()->create(['name' => 'Utilities']);
+it('returns every expense category with its expenses and total, in saved order', function () {
+    $subscriptions = ExpenseCategory::factory()->create(['name' => 'Subscriptions', 'position' => 2]);
+    $utilities = ExpenseCategory::factory()->create(['name' => 'Utilities', 'position' => 1]);
 
     Expense::factory()->create(['expense_category_id' => $subscriptions->id, 'name' => 'Netflix', 'amount' => 13]);
     Expense::factory()->create(['expense_category_id' => $subscriptions->id, 'name' => 'YouTube', 'amount' => 20]);
@@ -54,17 +54,21 @@ it('returns subscriptions category expenses, highest amount first', function () 
     $this->actingAs(verifiedUser())
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('subscriptions', 2)
-            ->where('subscriptions.0.name', 'YouTube')
-            ->where('subscriptions.0.amount', 20)
-            ->where('subscriptions.1.name', 'Netflix'));
+            ->has('expenseCategories', 2)
+            ->where('expenseCategories.0.name', 'Utilities')
+            ->where('expenseCategories.0.total', 40)
+            ->where('expenseCategories.1.name', 'Subscriptions')
+            ->where('expenseCategories.1.total', 33)
+            ->has('expenseCategories.1.expenses', 2)
+            ->where('expenseCategories.1.expenses.0.name', 'YouTube')
+            ->where('expenseCategories.1.expenses.0.amount', 20)
+            ->where('expenseCategories.1.expenses.1.name', 'Netflix'));
 });
 
-it('returns no subscriptions when the category is absent', function () {
-    $food = ExpenseCategory::factory()->create(['name' => 'Food']);
-    Expense::factory()->create(['expense_category_id' => $food->id]);
+it('omits expense categories without expenses', function () {
+    ExpenseCategory::factory()->create(['name' => 'Empty']);
 
     $this->actingAs(verifiedUser())
         ->get(route('dashboard'))
-        ->assertInertia(fn (Assert $page) => $page->has('subscriptions', 0));
+        ->assertInertia(fn (Assert $page) => $page->has('expenseCategories', 0));
 });

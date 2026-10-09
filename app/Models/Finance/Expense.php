@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $expense_category_id
  * @property string $name
+ * @property string|null $color
  * @property int $amount
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -23,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Expense newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Expense query()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Expense whereAmount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Expense whereColor($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Expense whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Expense whereExpenseCategoryId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Expense whereId($value)
@@ -31,7 +33,7 @@ use Illuminate\Support\Carbon;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['expense_category_id', 'name', 'amount'])]
+#[Fillable(['expense_category_id', 'name', 'color', 'amount'])]
 class Expense extends Model
 {
     /** @use HasFactory<ExpenseFactory> */

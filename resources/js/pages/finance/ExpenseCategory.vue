@@ -2,6 +2,7 @@
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { EllipsisVertical, Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import ColorPicker from '@/components/ColorPicker.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ const isEditing = computed(() => editingCategory.value !== null);
 
 const form = useForm({
     name: '',
+    color: null as string | null,
 });
 
 function openCreate() {
@@ -62,6 +64,7 @@ function openCreate() {
 function openEdit(category: ExpenseCategory) {
     editingCategory.value = category;
     form.name = category.name;
+    form.color = category.color;
     form.clearErrors();
     showDialog.value = true;
 }
@@ -161,7 +164,21 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 class="border-b transition-colors last:border-0 hover:bg-muted/50"
                             >
                                 <td class="px-4 py-3 font-medium">
-                                    {{ category.name }}
+                                    <span class="flex items-center gap-2">
+                                        <span
+                                            class="size-2.5 shrink-0 rounded-full"
+                                            :class="{
+                                                'border border-dashed border-muted-foreground':
+                                                    !category.color,
+                                            }"
+                                            :style="{
+                                                backgroundColor:
+                                                    category.color ?? undefined,
+                                            }"
+                                        />
+
+                                        {{ category.name }}
+                                    </span>
                                 </td>
 
                                 <td class="px-4 py-3">
@@ -233,6 +250,14 @@ const breadcrumbs: BreadcrumbItem[] = [
                             />
 
                             <InputError :message="form.errors.name" />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label>Color</Label>
+
+                            <ColorPicker v-model="form.color" />
+
+                            <InputError :message="form.errors.color" />
                         </div>
 
                         <DialogFooter>

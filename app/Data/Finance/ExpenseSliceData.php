@@ -6,11 +6,12 @@ use Spatie\LaravelData\Data;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 #[TypeScript]
-class SubscriptionExpenseData extends Data
+class ExpenseSliceData extends Data
 {
     public function __construct(
         public int $id,
         public string $name,
+        public ?string $color,
         public int $amount,
     ) {}
 }

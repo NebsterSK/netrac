@@ -4,7 +4,7 @@ namespace App\Http\Requests\Finance\ExpenseCategory;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreExpenseCategoryRequest extends FormRequest
+class ReorderExpenseCategoriesRequest extends FormRequest
 {
     /**
      * @return array<string, array<mixed>>
@@ -12,8 +12,8 @@ class StoreExpenseCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', 'unique:expense_categories,name'],
-            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'distinct', 'exists:expense_categories,id'],
         ];
     }
 }

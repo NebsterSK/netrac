@@ -15,6 +15,7 @@ class StoreExpenseRequest extends FormRequest
             'expense_category_id' => ['required', 'integer', 'exists:expense_categories,id'],
             'name' => ['required', 'string', 'max:255', 'unique:expenses,name'],
             'amount' => ['required', 'integer', 'min:0'],
+            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ];
     }
 }

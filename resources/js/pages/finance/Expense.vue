@@ -15,6 +15,7 @@ import {
     X,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import ColorPicker from '@/components/ColorPicker.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -197,6 +198,7 @@ const form = useForm({
     name: '',
     expense_category_id: '' as string,
     amount: '' as string,
+    color: null as string | null,
 });
 
 function openCreate() {
@@ -211,6 +213,7 @@ function openEdit(expense: Expense) {
     form.name = expense.name;
     form.expense_category_id = String(expense.expense_category_id);
     form.amount = String(expense.amount);
+    form.color = expense.color;
     form.clearErrors();
     showDialog.value = true;
 }
@@ -228,6 +231,7 @@ function submitForm() {
             ? Number(data.expense_category_id)
             : null,
         amount: data.amount === '' ? null : Number(data.amount),
+        color: data.color,
     }))[method](url, {
         preserveScroll: true,
         onSuccess: () => {
@@ -451,7 +455,21 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 class="border-b transition-colors last:border-0 hover:bg-muted/50"
                             >
                                 <td class="px-4 py-3 font-medium">
-                                    {{ expense.name }}
+                                    <span class="flex items-center gap-2">
+                                        <span
+                                            class="size-2.5 shrink-0 rounded-full"
+                                            :class="{
+                                                'border border-dashed border-muted-foreground':
+                                                    !expense.color,
+                                            }"
+                                            :style="{
+                                                backgroundColor:
+                                                    expense.color ?? undefined,
+                                            }"
+                                        />
+
+                                        {{ expense.name }}
+                                    </span>
                                 </td>
 
                                 <td class="px-4 py-3">
@@ -632,6 +650,14 @@ const breadcrumbs: BreadcrumbItem[] = [
                             />
 
                             <InputError :message="form.errors.amount" />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label>Color</Label>
+
+                            <ColorPicker v-model="form.color" />
+
+                            <InputError :message="form.errors.color" />
                         </div>
 
                         <DialogFooter>

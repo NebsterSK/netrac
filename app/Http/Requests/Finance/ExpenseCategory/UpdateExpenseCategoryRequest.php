@@ -14,6 +14,7 @@ class UpdateExpenseCategoryRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique('expense_categories', 'name')->ignore($this->route('expenseCategory'))],
+            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ];
     }
 }

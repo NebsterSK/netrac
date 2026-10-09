@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Finance\ExpenseCategoryBreakdownData;
 use App\Data\Finance\MonthlyAverageData;
 use App\Data\Finance\PeriodAveragesData;
-use App\Data\Finance\SubscriptionExpenseData;
-use App\Models\Finance\Expense;
+use App\Models\Finance\ExpenseCategory;
 use App\Models\Finance\MonthlyBalance;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -34,16 +34,19 @@ class DashboardController extends Controller
             'overall' => $balances->isEmpty() ? null : (int) round($balances->avg()),
         ];
 
-        $subscriptions = Expense::query()
-            ->whereRelation('expenseCategory', 'name', 'Subscriptions')
-            ->orderByDesc('amount')
+        $expenseCategories = ExpenseCategory::query()
+            ->whereHas('expenses')
+            ->with(['expenses' => fn ($query) => $query->orderByDesc('amount')->orderBy('name')])
+            ->orderBy('position')
             ->orderBy('name')
             ->get();
 
         return Inertia::render('Dashboard', [
             'monthlyAverages' => MonthlyAverageData::collect($monthlyAverages),
             'periodAverages' => PeriodAveragesData::from($periodAverages),
-            'subscriptions' => SubscriptionExpenseData::collect($subscriptions),
+            'expenseCategories' => $expenseCategories
+                ->map(fn (ExpenseCategory $category): ExpenseCategoryBreakdownData => ExpenseCategoryBreakdownData::fromCategory($category))
+                ->values(),
         ]);
     }
 }

@@ -19,19 +19,34 @@ goals: App.Data.Buzerlistok.GoalData[],
 };
 }
 namespace Finance {
+export type ExpenseCategoryBreakdownData = {
+id: number,
+name: string,
+color: string | null,
+total: number,
+expenses: App.Data.Finance.ExpenseSliceData[],
+};
 export type ExpenseCategoryData = {
 id: number,
 name: string,
+color: string | null,
 expenses_count: number | null,
 };
 export type ExpenseData = {
 id: number,
 name: string,
+color: string | null,
 expense_category_id: number,
 amount: number,
 expenseCategory: App.Data.Finance.ExpenseCategoryData,
 created_at: string,
 updated_at: string,
+};
+export type ExpenseSliceData = {
+id: number,
+name: string,
+color: string | null,
+amount: number,
 };
 export type MonthlyAverageData = {
 month: number,
@@ -60,11 +75,6 @@ uniqa_dds: number,
 finax: number,
 trading212: number,
 is_draft: boolean,
-};
-export type SubscriptionExpenseData = {
-id: number,
-name: string,
-amount: number,
 };
 }
 namespace Health {

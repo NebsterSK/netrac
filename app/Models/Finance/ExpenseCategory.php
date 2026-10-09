@@ -13,6 +13,8 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $name
+ * @property string|null $color
+ * @property int $position
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Expense> $expenses
@@ -22,18 +24,30 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExpenseCategory newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExpenseCategory newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExpenseCategory query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ExpenseCategory whereColor($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExpenseCategory whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExpenseCategory whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExpenseCategory whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ExpenseCategory wherePosition($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ExpenseCategory whereUpdatedAt($value)
  *
  * @mixin \Eloquent
  */
-#[Fillable(['name'])]
+#[Fillable(['name', 'color', 'position'])]
 class ExpenseCategory extends Model
 {
     /** @use HasFactory<ExpenseCategoryFactory> */
     use HasFactory;
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'position' => 'integer',
+        ];
+    }
 
     /**
      * @return HasMany<Expense, $this>
