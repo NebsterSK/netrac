@@ -17,11 +17,11 @@ class DashboardController extends Controller
     {
         $monthlyAverages = MonthlyBalance::query()
             ->select(
-                DB::raw('MONTH(date) as month'),
-                DB::raw('ROUND(AVG(amount)) as average'),
+                DB::raw('EXTRACT(MONTH FROM date)::int as month'),
+                DB::raw('ROUND(AVG(amount))::int as average'),
                 DB::raw('COUNT(*) as count'),
             )
-            ->groupBy(DB::raw('MONTH(date)'))
+            ->groupBy('month')
             ->orderBy('month')
             ->get();
 
