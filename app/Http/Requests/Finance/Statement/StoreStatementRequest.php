@@ -6,6 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreStatementRequest extends FormRequest
 {
+    use ValidatesDraftPosition;
+
     /**
      * @return array<string, array<mixed>>
      */
@@ -19,6 +21,7 @@ class StoreStatementRequest extends FormRequest
             'uniqa_dds' => ['required', 'integer', 'min:0', 'max:2147483647'],
             'finax' => ['required', 'integer', 'min:0', 'max:2147483647'],
             'trading212' => ['required', 'integer', 'min:0', 'max:2147483647'],
+            'is_draft' => ['required', 'boolean'],
         ];
     }
 }

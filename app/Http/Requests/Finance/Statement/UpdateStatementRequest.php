@@ -7,6 +7,8 @@ use Illuminate\Validation\Rule;
 
 class UpdateStatementRequest extends FormRequest
 {
+    use ValidatesDraftPosition;
+
     /**
      * @return array<string, array<mixed>>
      */
@@ -20,6 +22,7 @@ class UpdateStatementRequest extends FormRequest
             'uniqa_dds' => ['required', 'integer', 'min:0', 'max:2147483647'],
             'finax' => ['required', 'integer', 'min:0', 'max:2147483647'],
             'trading212' => ['required', 'integer', 'min:0', 'max:2147483647'],
+            'is_draft' => ['required', 'boolean'],
         ];
     }
 }

@@ -23,6 +23,14 @@ class StatementFactory extends Factory
             'uniqa_dds' => fake()->numberBetween(0, 10000),
             'finax' => fake()->numberBetween(0, 10000),
             'trading212' => fake()->numberBetween(0, 10000),
+            'is_draft' => false,
         ];
+    }
+
+    public function draft(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_draft' => true,
+        ]);
     }
 }

@@ -18,5 +18,6 @@ class StatementData extends Data
         public int $uniqa_dds,
         public int $finax,
         public int $trading212,
+        public bool $is_draft,
     ) {}
 }

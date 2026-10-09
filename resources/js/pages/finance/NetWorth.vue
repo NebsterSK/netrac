@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import type { TooltipItem } from 'chart.js';
+import type { ScriptableLineSegmentContext, TooltipItem } from 'chart.js';
 import {
     CategoryScale,
     Chart as ChartJS,
@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import {
     ArrowUp,
+    CircleCheck,
     ChevronLeft,
     ChevronRight,
     EllipsisVertical,
@@ -24,6 +25,7 @@ import {
 import { computed, ref } from 'vue';
 import { Line } from 'vue-chartjs';
 import InputError from '@/components/InputError.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -32,6 +34,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -97,6 +100,7 @@ const form = useForm({
     uniqa_dds: undefined as number | undefined,
     finax: undefined as number | undefined,
     trading212: undefined as number | undefined,
+    is_draft: false,
 });
 
 function openCreate() {
@@ -108,6 +112,7 @@ function openCreate() {
     form.uniqa_dds = undefined;
     form.finax = undefined;
     form.trading212 = undefined;
+    form.is_draft = false;
     pickerYear.value = new Date().getFullYear();
     showDialog.value = true;
 }
@@ -122,6 +127,7 @@ function openEdit(statement: Statement) {
     form.uniqa_dds = statement.uniqa_dds;
     form.finax = statement.finax;
     form.trading212 = statement.trading212;
+    form.is_draft = statement.is_draft;
     pickerYear.value = date.getFullYear();
     showDialog.value = true;
 }
@@ -129,10 +135,66 @@ function openEdit(statement: Statement) {
 const selectedYear = computed(() => parseInt(form.date.split('-')[0]));
 const selectedMonth = computed(() => parseInt(form.date.split('-')[1]));
 
-function isMonthDisabled(month: number): boolean {
-    const key = `${pickerYear.value}-${String(month).padStart(2, '0')}`;
+const draftStatement = computed(
+    () => props.statements.find((statement) => statement.is_draft) ?? null,
+);
 
-    return props.existingDates.some((date) => date.startsWith(key));
+const latestRealStatement = computed(
+    () =>
+        sortedStatements.value.filter((statement) => !statement.is_draft).at(-1) ??
+        null,
+);
+
+const canBeDraft = computed(() => {
+    if (!isEditing.value) {
+        return draftStatement.value === null;
+    }
+
+    const editing = editingStatement.value!;
+
+    if (editing.is_draft) {
+        return true;
+    }
+
+    return (
+        draftStatement.value === null &&
+        latestRealStatement.value?.id === editing.id
+    );
+});
+
+function monthKey(date: string): string {
+    return date.slice(0, 7);
+}
+
+function isMonthDisabled(month: number, year = pickerYear.value): boolean {
+    const key = `${year}-${String(month).padStart(2, '0')}`;
+
+    if (props.existingDates.some((date) => date.startsWith(key))) {
+        return true;
+    }
+
+    if (form.is_draft) {
+        return (
+            latestRealStatement.value !== null &&
+            key <= monthKey(latestRealStatement.value.date)
+        );
+    }
+
+    return (
+        draftStatement.value !== null &&
+        key >= monthKey(draftStatement.value.date)
+    );
+}
+
+function toggleDraft(checked: boolean | 'indeterminate') {
+    form.is_draft = checked === true;
+
+    if (
+        !isEditing.value &&
+        isMonthDisabled(selectedMonth.value, selectedYear.value)
+    ) {
+        form.date = '';
+    }
 }
 
 function selectMonth(month: number) {
@@ -152,6 +214,19 @@ function submitForm() {
             editingStatement.value = null;
             form.reset();
         },
+    });
+}
+
+function finalizeStatement(statement: Statement) {
+    router.put(update.url(statement.id), {
+        date: statement.date.slice(0, 10),
+        account: statement.account,
+        legacy_upgrade: statement.legacy_upgrade,
+        uniqa_sds: statement.uniqa_sds,
+        uniqa_dds: statement.uniqa_dds,
+        finax: statement.finax,
+        trading212: statement.trading212,
+        is_draft: false,
     });
 }
 
@@ -193,6 +268,12 @@ const sortedStatements = computed(() =>
     ),
 );
 
+const realStatementIds = computed(() =>
+    sortedStatements.value
+        .filter((statement) => !statement.is_draft)
+        .map((statement) => statement.id),
+);
+
 const gainByStatementId = computed(() => {
     const gains: Record<number, number | null> = {};
     const sorted = sortedStatements.value;
@@ -230,9 +311,9 @@ const gainPercentByStatementId = computed(() => {
 });
 
 const averageGain = computed(() => {
-    const gains = Object.values(gainByStatementId.value).filter(
-        (val): val is number => val !== null,
-    );
+    const gains = realStatementIds.value
+        .map((id) => gainByStatementId.value[id])
+        .filter((val): val is number => val !== null);
 
     if (gains.length === 0) {
         return 0;
@@ -242,9 +323,9 @@ const averageGain = computed(() => {
 });
 
 const averageGainPercent = computed(() => {
-    const percents = Object.values(gainPercentByStatementId.value).filter(
-        (val): val is number => val !== null,
-    );
+    const percents = realStatementIds.value
+        .map((id) => gainPercentByStatementId.value[id])
+        .filter((val): val is number => val !== null);
 
     if (percents.length === 0) {
         return 0;
@@ -331,21 +412,43 @@ const chartData = computed(() => {
         return date.toLocaleDateString('en-US', { month: 'short' });
     });
 
+    const isDraftSegment = (ctx: ScriptableLineSegmentContext) =>
+        sorted[ctx.p1DataIndex]?.is_draft ?? false;
+
     return {
         labels,
-        datasets: columns.map((col) => ({
-            label: col.label,
-            data: sorted.map((stmt) => stmt[col.key]),
-            borderColor: col.color,
-            backgroundColor: col.color
+        datasets: columns.map((col) => {
+            const fillColor = col.color
                 .replace('rgb(', 'rgba(')
-                .replace(')', ', 0.1)'),
-            borderWidth: 3,
-            pointRadius: 5,
-            pointHoverRadius: 5,
-            fill: true,
-            tension: 0,
-        })),
+                .replace(')', ', 0.1)');
+            const draftFillColor = col.color
+                .replace('rgb(', 'rgba(')
+                .replace(')', ', 0.03)');
+
+            return {
+                label: col.label,
+                data: sorted.map((stmt) => stmt[col.key]),
+                borderColor: col.color,
+                backgroundColor: fillColor,
+                pointBackgroundColor: sorted.map((stmt) =>
+                    stmt.is_draft ? 'transparent' : col.color,
+                ),
+                pointBorderWidth: sorted.map((stmt) =>
+                    stmt.is_draft ? 2 : 1,
+                ),
+                borderWidth: 3,
+                pointRadius: 5,
+                pointHoverRadius: 5,
+                fill: true,
+                tension: 0,
+                segment: {
+                    borderDash: (ctx: ScriptableLineSegmentContext) =>
+                        isDraftSegment(ctx) ? [6, 6] : undefined,
+                    backgroundColor: (ctx: ScriptableLineSegmentContext) =>
+                        isDraftSegment(ctx) ? draftFillColor : undefined,
+                },
+            };
+        }),
     };
 });
 
@@ -380,11 +483,12 @@ const chartOptions = computed(() => {
                     title: (items: TooltipItem<'line'>[]) => {
                         const stmt = sortedStatements.value[items[0].dataIndex];
                         const date = new Date(stmt.date);
-
-                        return date.toLocaleDateString('en-US', {
+                        const title = date.toLocaleDateString('en-US', {
                             month: 'short',
                             year: 'numeric',
                         });
+
+                        return stmt.is_draft ? `${title} (draft)` : title;
                     },
                     label: (context: TooltipItem<'line'>) => {
                         const value = context.parsed.y ?? 0;
@@ -545,6 +649,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         v-for="statement in yearStatements"
                                         :key="statement.id"
                                         class="group/row border-b transition-colors last:border-0 hover:bg-muted/50"
+                                        :class="{
+                                            'bg-[repeating-linear-gradient(-45deg,transparent_0_6px,var(--color-muted)_6px_12px)] italic opacity-70':
+                                                statement.is_draft,
+                                        }"
                                     >
                                         <td class="w-0 pl-4">
                                             <DropdownMenu>
@@ -562,6 +670,21 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                 <DropdownMenuContent
                                                     align="start"
                                                 >
+                                                    <DropdownMenuItem
+                                                        v-if="statement.is_draft"
+                                                        class="cursor-pointer"
+                                                        @click="
+                                                            finalizeStatement(
+                                                                statement,
+                                                            )
+                                                        "
+                                                    >
+                                                        <CircleCheck
+                                                            class="size-4"
+                                                        />
+                                                        Finalize
+                                                    </DropdownMenuItem>
+
                                                     <DropdownMenuItem
                                                         class="cursor-pointer"
                                                         @click="
@@ -592,10 +715,20 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         </td>
 
                                         <td class="border-r px-4 py-3">
-                                            <span class="text-muted-foreground">
+                                            <span
+                                                class="flex items-center gap-2 text-muted-foreground"
+                                            >
                                                 {{
                                                     formatMonth(statement.date)
                                                 }}
+
+                                                <Badge
+                                                    v-if="statement.is_draft"
+                                                    variant="outline"
+                                                    class="border-dashed not-italic"
+                                                >
+                                                    Draft
+                                                </Badge>
                                             </span>
                                         </td>
 
@@ -848,6 +981,21 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                 <form @submit.prevent="submitForm" class="space-y-4">
                     <InputError :message="form.errors.date" />
+
+                    <div v-if="canBeDraft" class="space-y-2">
+                        <Label for="stmt-is-draft" class="flex items-center gap-3">
+                            <Checkbox
+                                id="stmt-is-draft"
+                                :model-value="form.is_draft"
+                                :disabled="form.processing"
+                                @update:model-value="toggleDraft"
+                            />
+
+                            <span>Draft (prediction)</span>
+                        </Label>
+
+                        <InputError :message="form.errors.is_draft" />
+                    </div>
 
                     <div class="space-y-2">
                         <Label>Date</Label>

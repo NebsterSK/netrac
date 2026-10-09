@@ -13,6 +13,7 @@ function statementPayload(array $overrides = []): array
         'uniqa_dds' => 4000,
         'finax' => 5000,
         'trading212' => 6000,
+        'is_draft' => false,
     ], $overrides);
 }
 
@@ -102,4 +103,94 @@ it('deletes a statement', function () {
         ->assertSessionHas('success');
 
     $this->assertModelMissing($statement);
+});
+
+describe('drafts', function () {
+    it('stores a draft after the latest statement', function () {
+        Statement::factory()->create(['date' => '2024-04-01']);
+
+        $this->actingAs(verifiedUser())
+            ->post(route('finance.net-worth.store'), statementPayload(['is_draft' => true]))
+            ->assertRedirect(route('finance.net-worth.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('statements', ['date' => '2024-05-01', 'is_draft' => true]);
+    });
+
+    it('exposes the draft flag to the page', function () {
+        Statement::factory()->draft()->create(['date' => '2024-05-01']);
+
+        $this->actingAs(verifiedUser())
+            ->get(route('finance.net-worth.index'))
+            ->assertInertia(fn (Assert $page) => $page->where('statements.0.is_draft', true));
+    });
+
+    it('rejects a draft dated before the latest statement', function () {
+        Statement::factory()->create(['date' => '2024-06-01']);
+
+        $this->actingAs(verifiedUser())
+            ->from(route('finance.net-worth.index'))
+            ->post(route('finance.net-worth.store'), statementPayload(['is_draft' => true]))
+            ->assertSessionHasErrors('is_draft');
+    });
+
+    it('rejects a second draft', function () {
+        Statement::factory()->draft()->create(['date' => '2024-04-01']);
+
+        $this->actingAs(verifiedUser())
+            ->from(route('finance.net-worth.index'))
+            ->post(route('finance.net-worth.store'), statementPayload(['is_draft' => true]))
+            ->assertSessionHasErrors('is_draft');
+    });
+
+    it('rejects a statement dated after the draft', function () {
+        Statement::factory()->draft()->create(['date' => '2024-04-01']);
+
+        $this->actingAs(verifiedUser())
+            ->from(route('finance.net-worth.index'))
+            ->post(route('finance.net-worth.store'), statementPayload())
+            ->assertSessionHasErrors('date');
+    });
+
+    it('allows a statement dated before the draft', function () {
+        Statement::factory()->draft()->create(['date' => '2024-06-01']);
+
+        $this->actingAs(verifiedUser())
+            ->post(route('finance.net-worth.store'), statementPayload())
+            ->assertSessionHasNoErrors();
+
+        expect(Statement::count())->toBe(2);
+    });
+
+    it('finalizes a draft', function () {
+        $draft = Statement::factory()->draft()->create(['date' => '2024-05-01']);
+
+        $this->actingAs(verifiedUser())
+            ->put(route('finance.net-worth.update', $draft), statementPayload(['account' => 999]))
+            ->assertSessionHasNoErrors();
+
+        expect($draft->refresh()->is_draft)->toBeFalse()
+            ->and($draft->account)->toBe(999);
+    });
+
+    it('turns the latest statement into a draft', function () {
+        Statement::factory()->create(['date' => '2024-04-01']);
+        $latest = Statement::factory()->create(['date' => '2024-05-01']);
+
+        $this->actingAs(verifiedUser())
+            ->put(route('finance.net-worth.update', $latest), statementPayload(['is_draft' => true]))
+            ->assertSessionHasNoErrors();
+
+        expect($latest->refresh()->is_draft)->toBeTrue();
+    });
+
+    it('rejects turning an older statement into a draft', function () {
+        $older = Statement::factory()->create(['date' => '2024-05-01']);
+        Statement::factory()->create(['date' => '2024-06-01']);
+
+        $this->actingAs(verifiedUser())
+            ->from(route('finance.net-worth.index'))
+            ->put(route('finance.net-worth.update', $older), statementPayload(['is_draft' => true]))
+            ->assertSessionHasErrors('is_draft');
+    });
 });

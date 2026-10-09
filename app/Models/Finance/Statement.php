@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property int $uniqa_dds
  * @property int $finax
  * @property int $trading212
+ * @property bool $is_draft
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
@@ -29,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereDate($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereFinax($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereIsDraft($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereLegacyUpgrade($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereTrading212($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUniqaDds($value)
@@ -37,7 +39,7 @@ use Illuminate\Support\Carbon;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['date', 'account', 'legacy_upgrade', 'uniqa_sds', 'uniqa_dds', 'finax', 'trading212'])]
+#[Fillable(['date', 'account', 'legacy_upgrade', 'uniqa_sds', 'uniqa_dds', 'finax', 'trading212', 'is_draft'])]
 class Statement extends Model
 {
     /** @use HasFactory<StatementFactory> */
@@ -53,6 +55,7 @@ class Statement extends Model
             'uniqa_dds' => 'integer',
             'finax' => 'integer',
             'trading212' => 'integer',
+            'is_draft' => 'boolean',
         ];
     }
 }
