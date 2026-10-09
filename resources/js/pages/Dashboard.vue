@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import { useEventListener } from '@vueuse/core';
 import { GripVertical } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import ExpenseDoughnut from '@/components/ExpenseDoughnut.vue';
@@ -68,6 +69,11 @@ const grandTotalSlices = computed(() =>
 );
 
 const draggedCategoryId = ref<number | null>(null);
+const grabbedCategoryId = ref<number | null>(null);
+
+useEventListener(window, 'pointerup', () => {
+    grabbedCategoryId.value = null;
+});
 
 function startDrag(event: DragEvent, categoryId: number) {
     draggedCategoryId.value = categoryId;
@@ -96,6 +102,7 @@ function dragOver(targetCategoryId: number) {
 
 function endDrag() {
     draggedCategoryId.value = null;
+    grabbedCategoryId.value = null;
 
     const ids = orderedCategories.value.map((category) => category.id);
     const originalIds = props.expenseCategories.map((category) => category.id);
@@ -349,7 +356,7 @@ const periods = computed(() => [
                 <Card
                     v-for="category in orderedCategories"
                     :key="category.id"
-                    draggable="true"
+                    :draggable="grabbedCategoryId === category.id"
                     class="transition-opacity"
                     :class="{
                         'opacity-40 ring-2 ring-primary/40':
@@ -374,8 +381,9 @@ const periods = computed(() => [
                             {{ category.name }}
 
                             <GripVertical
-                                class="ml-auto size-4 cursor-grab text-muted-foreground"
+                                class="ml-auto size-4 cursor-grab text-muted-foreground active:cursor-grabbing"
                                 aria-label="Drag to reorder"
+                                @pointerdown="grabbedCategoryId = category.id"
                             />
                         </CardTitle>
                     </CardHeader>
