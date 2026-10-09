@@ -22,6 +22,10 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Week newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Week newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Week query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Week whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Week whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Week whereStartsOn($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Week whereUpdatedAt($value)
  *
  * @mixin \Eloquent
  */

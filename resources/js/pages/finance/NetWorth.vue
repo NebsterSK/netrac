@@ -141,8 +141,9 @@ const draftStatement = computed(
 
 const latestRealStatement = computed(
     () =>
-        sortedStatements.value.filter((statement) => !statement.is_draft).at(-1) ??
-        null,
+        sortedStatements.value
+            .filter((statement) => !statement.is_draft)
+            .at(-1) ?? null,
 );
 
 const canBeDraft = computed(() => {
@@ -433,9 +434,7 @@ const chartData = computed(() => {
                 pointBackgroundColor: sorted.map((stmt) =>
                     stmt.is_draft ? 'transparent' : col.color,
                 ),
-                pointBorderWidth: sorted.map((stmt) =>
-                    stmt.is_draft ? 2 : 1,
-                ),
+                pointBorderWidth: sorted.map((stmt) => (stmt.is_draft ? 2 : 1)),
                 borderWidth: 3,
                 pointRadius: 5,
                 pointHoverRadius: 5,
@@ -671,7 +670,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                     align="start"
                                                 >
                                                     <DropdownMenuItem
-                                                        v-if="statement.is_draft"
+                                                        v-if="
+                                                            statement.is_draft
+                                                        "
                                                         class="cursor-pointer"
                                                         @click="
                                                             finalizeStatement(
@@ -983,7 +984,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <InputError :message="form.errors.date" />
 
                     <div v-if="canBeDraft" class="space-y-2">
-                        <Label for="stmt-is-draft" class="flex items-center gap-3">
+                        <Label
+                            for="stmt-is-draft"
+                            class="flex items-center gap-3"
+                        >
                             <Checkbox
                                 id="stmt-is-draft"
                                 :model-value="form.is_draft"

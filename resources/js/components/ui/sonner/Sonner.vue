@@ -10,5 +10,5 @@ const { resolvedAppearance } = useAppearance();
 </script>
 
 <template>
-    <Sonner :theme="resolvedAppearance" v-bind="props" />
+    <Sonner v-bind="props" :theme="resolvedAppearance" />
 </template>

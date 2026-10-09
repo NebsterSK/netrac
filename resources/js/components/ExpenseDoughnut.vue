@@ -96,8 +96,7 @@ const centerTotalPlugin: Plugin<'doughnut'> = {
     id: 'expenseCenterTotal',
     afterDraw(chart) {
         const arc = chart.getDatasetMeta(0).data[0] as
-            | { x: number; y: number }
-            | undefined;
+            { x: number; y: number } | undefined;
 
         if (!arc) {
             return;

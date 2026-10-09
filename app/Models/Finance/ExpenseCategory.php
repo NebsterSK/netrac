@@ -13,10 +13,10 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $name
- * @property string|null $color
- * @property int $position
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property int $position
+ * @property string|null $color
  * @property-read Collection<int, Expense> $expenses
  * @property-read int|null $expenses_count
  *

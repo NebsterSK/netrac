@@ -24,6 +24,13 @@ use Illuminate\Support\Carbon;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Mark newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Mark newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Mark query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Mark whereComment($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Mark whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Mark whereGoalId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Mark whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Mark whereMarkedOn($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Mark whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Mark whereUpdatedAt($value)
  *
  * @mixin \Eloquent
  */

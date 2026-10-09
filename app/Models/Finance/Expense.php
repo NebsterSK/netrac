@@ -13,10 +13,10 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $expense_category_id
  * @property string $name
- * @property string|null $color
  * @property int $amount
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property string|null $color
  * @property-read ExpenseCategory $expenseCategory
  *
  * @method static \Database\Factories\Finance\ExpenseFactory factory($count = null, $state = [])

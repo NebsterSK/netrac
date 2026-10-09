@@ -18,14 +18,20 @@ use Illuminate\Support\Carbon;
  * @property int $position
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Week $week
  * @property-read Collection<int, Mark> $marks
  * @property-read int|null $marks_count
+ * @property-read Week $week
  *
  * @method static \Database\Factories\Buzerlistok\GoalFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Goal newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Goal newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Goal query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Goal whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Goal whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Goal whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Goal wherePosition($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Goal whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Goal whereWeekId($value)
  *
  * @mixin \Eloquent
  */

@@ -12,11 +12,11 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property int $exercise_category_id
  * @property string $name
- * @property MovementPattern|null $movement_pattern
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property int $exercise_category_id
+ * @property MovementPattern|null $movement_pattern
  * @property-read ExerciseCategory $exerciseCategory
  *
  * @method static \Database\Factories\Health\ExerciseFactory factory($count = null, $state = [])

@@ -13,9 +13,9 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $name
- * @property int $priority
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property int $priority
  * @property-read Collection<int, Exercise> $exercises
  * @property-read int|null $exercises_count
  *

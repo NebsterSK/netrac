@@ -17,9 +17,9 @@ use Illuminate\Support\Carbon;
  * @property int $uniqa_dds
  * @property int $finax
  * @property int $trading212
- * @property bool $is_draft
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property bool $is_draft
  *
  * @method static \Database\Factories\Finance\StatementFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement newModelQuery()
