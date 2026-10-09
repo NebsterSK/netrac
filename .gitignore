@@ -25,3 +25,4 @@ Thumbs.db
 /resources/js/actions
 /resources/js/routes
 /resources/js/wayfinder
+.env.before_lerd
