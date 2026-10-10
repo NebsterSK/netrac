@@ -31,6 +31,22 @@ it('reports null period averages with no balances', function () {
             ->where('periodAverages.last6', null));
 });
 
+it('averages balances per calendar month', function () {
+    MonthlyBalance::factory()->create(['date' => '2023-03-01', 'amount' => 100]);
+    MonthlyBalance::factory()->create(['date' => '2024-03-01', 'amount' => 201]);
+    MonthlyBalance::factory()->create(['date' => '2024-07-01', 'amount' => -50]);
+
+    $this->actingAs(verifiedUser())
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('monthlyAverages', 2)
+            ->where('monthlyAverages.0.month', 3)
+            ->where('monthlyAverages.0.average', 151)
+            ->where('monthlyAverages.0.count', 2)
+            ->where('monthlyAverages.1.month', 7)
+            ->where('monthlyAverages.1.average', -50));
+});
+
 it('computes the overall average from balances', function () {
     MonthlyBalance::factory()->create(['date' => '2024-01-01', 'amount' => 100]);
     MonthlyBalance::factory()->create(['date' => '2024-02-01', 'amount' => 200]);
