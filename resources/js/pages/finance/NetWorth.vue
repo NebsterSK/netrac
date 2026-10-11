@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { useMediaQuery } from '@vueuse/core';
 import type { ScriptableLineSegmentContext, TooltipItem } from 'chart.js';
 import {
     CategoryScale,
@@ -398,6 +399,9 @@ ChartJS.register(
     Filler,
 );
 
+/** Phones get thinner lines and smaller points so dense series stay readable. */
+const isPhone = useMediaQuery('(max-width: 639px)');
+
 const chartData = computed(() => {
     const sorted = sortedStatements.value;
     const labels = sorted.map((stmt) => {
@@ -435,9 +439,9 @@ const chartData = computed(() => {
                     stmt.is_draft ? 'transparent' : col.color,
                 ),
                 pointBorderWidth: sorted.map((stmt) => (stmt.is_draft ? 2 : 1)),
-                borderWidth: 3,
-                pointRadius: 5,
-                pointHoverRadius: 5,
+                borderWidth: isPhone.value ? 2 : 3,
+                pointRadius: isPhone.value ? 2 : 5,
+                pointHoverRadius: isPhone.value ? 3 : 5,
                 fill: true,
                 tension: 0,
                 segment: {
@@ -615,9 +619,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 <tr
                                     class="border-b text-xs text-muted-foreground"
                                 >
-                                    <th class="w-0 pl-4"></th>
+                                    <th
+                                        class="w-0 pl-4 max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card"
+                                    ></th>
 
-                                    <th class="border-r px-4 py-2">Month</th>
+                                    <th
+                                        class="border-r px-4 py-2 max-sm:sticky max-sm:left-8 max-sm:z-10 max-sm:bg-card max-sm:shadow-[1px_0_0_var(--color-border)]"
+                                    >
+                                        Month
+                                    </th>
 
                                     <th
                                         v-for="col in columns"
@@ -653,7 +663,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                 statement.is_draft,
                                         }"
                                     >
-                                        <td class="w-0 pl-4">
+                                        <td
+                                            class="w-0 pl-4 max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card"
+                                        >
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger as-child>
                                                     <button
@@ -715,7 +727,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                             </DropdownMenu>
                                         </td>
 
-                                        <td class="border-r px-4 py-3">
+                                        <td
+                                            class="border-r px-4 py-3 max-sm:sticky max-sm:left-8 max-sm:z-10 max-sm:bg-card max-sm:shadow-[1px_0_0_var(--color-border)]"
+                                        >
                                             <span
                                                 class="flex items-center gap-2 text-muted-foreground"
                                             >
@@ -937,7 +951,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                             :colspan="columns.length + 5"
                                         >
                                             <span
-                                                class="flex items-center gap-1"
+                                                class="flex items-center gap-1 max-sm:sticky max-sm:left-4 max-sm:w-fit"
                                             >
                                                 <ArrowUp class="size-4" />
 

@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { GripVertical, Plus, X } from 'lucide-vue-next';
+import {
+    ChevronDown,
+    ChevronUp,
+    GripVertical,
+    Plus,
+    X,
+} from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -174,7 +180,7 @@ function submitForm() {
                                     @drop.prevent="onDragEnd()"
                                 >
                                     <div
-                                        class="cursor-grab text-muted-foreground active:cursor-grabbing"
+                                        class="cursor-grab text-muted-foreground active:cursor-grabbing max-sm:hidden"
                                         aria-label="Drag to reorder"
                                     >
                                         <GripVertical class="size-4" />
@@ -184,6 +190,34 @@ function submitForm() {
                                         v-model="goal.name"
                                         placeholder="e.g. Exercise, Read, No sugar"
                                     />
+
+                                    <div class="flex sm:hidden">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            class="cursor-pointer text-muted-foreground"
+                                            aria-label="Move up"
+                                            :disabled="index === 0"
+                                            @click="moveGoal(index, index - 1)"
+                                        >
+                                            <ChevronUp class="size-4" />
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            class="cursor-pointer text-muted-foreground"
+                                            aria-label="Move down"
+                                            :disabled="
+                                                index === form.goals.length - 1
+                                            "
+                                            @click="moveGoal(index, index + 1)"
+                                        >
+                                            <ChevronDown class="size-4" />
+                                        </Button>
+                                    </div>
 
                                     <Button
                                         type="button"

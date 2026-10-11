@@ -145,7 +145,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 <td class="px-4 py-3">
                                     <Link
                                         :href="sessionRoutes.show(session.id)"
-                                        class="hover:underline"
+                                        class="hover:underline max-sm:block"
                                     >
                                         {{ formatDate(session.performed_at) }}
                                     </Link>

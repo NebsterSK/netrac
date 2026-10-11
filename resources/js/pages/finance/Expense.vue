@@ -360,7 +360,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     >
                         <thead class="border-b text-muted-foreground">
                             <tr>
-                                <th class="px-4 py-2 font-medium">
+                                <th class="px-2 py-2 font-medium sm:px-4">
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -375,7 +375,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="px-4 py-2 font-medium">
+                                <th class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4">
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -390,7 +390,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="px-4 py-2 text-right font-medium">
+                                <th class="px-2 py-2 text-right font-medium sm:px-4">
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -405,7 +405,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="px-4 py-2 font-medium">
+                                <th class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4">
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -420,7 +420,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="px-4 py-2 font-medium">
+                                <th class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4">
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -435,7 +435,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="w-0 px-4 py-2"></th>
+                                <th class="w-0 px-2 py-2 sm:px-4"></th>
                             </tr>
                         </thead>
 
@@ -454,7 +454,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 :key="expense.id"
                                 class="border-b transition-colors last:border-0 hover:bg-muted/50"
                             >
-                                <td class="px-4 py-3 font-medium">
+                                <td class="px-2 py-3 font-medium sm:px-4">
                                     <span class="flex items-center gap-2">
                                         <span
                                             class="size-2.5 shrink-0 rounded-full"
@@ -470,15 +470,22 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                                         {{ expense.name }}
                                     </span>
+
+                                    <Badge
+                                        variant="secondary"
+                                        class="mt-1 ml-4.5 text-xs sm:hidden"
+                                    >
+                                        {{ expense.expenseCategory.name }}
+                                    </Badge>
                                 </td>
 
-                                <td class="px-4 py-3">
+                                <td class="hidden px-2 py-3 sm:table-cell sm:px-4">
                                     <Badge variant="secondary" class="text-xs">
                                         {{ expense.expenseCategory.name }}
                                     </Badge>
                                 </td>
 
-                                <td class="px-4 py-3 text-right font-medium">
+                                <td class="px-2 py-3 text-right font-medium sm:px-4">
                                     <span class="font-mono">
                                         {{ formatAmount(expense.amount) }}
                                     </span>
@@ -490,15 +497,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </span>
                                 </td>
 
-                                <td class="px-4 py-3 text-muted-foreground">
+                                <td class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4">
                                     {{ formatDate(expense.created_at) }}
                                 </td>
 
-                                <td class="px-4 py-3 text-muted-foreground">
+                                <td class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4">
                                     {{ formatDate(expense.updated_at) }}
                                 </td>
 
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-2 py-3 text-right sm:px-4">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger as-child>
                                             <button

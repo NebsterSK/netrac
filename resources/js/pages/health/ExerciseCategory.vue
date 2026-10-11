@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
 import {
+    ArrowDown,
+    ArrowUp,
     EllipsisVertical,
     GripVertical,
     Pencil,
@@ -152,6 +154,22 @@ function onDrop(priority: number) {
         return;
     }
 
+    moveCategory(id, priority);
+}
+
+/**
+ * Whether a category can be moved to the given lane. Backs the touch-friendly
+ * "Raise / Lower priority" menu items, since drag-and-drop is unreliable on phones.
+ */
+function canMoveTo(category: ExerciseCategory, priority: number): boolean {
+    return (
+        priority >= 1 &&
+        priority <= lanes.value.length &&
+        keepsSingleLowest(category.id, priority)
+    );
+}
+
+function moveCategory(id: number, priority: number) {
     const category = props.categories.find((item) => item.id === id);
 
     if (!category || category.priority === priority) {
@@ -341,6 +359,44 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </DropdownMenuTrigger>
 
                                     <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                            class="cursor-pointer sm:hidden"
+                                            :disabled="
+                                                !canMoveTo(
+                                                    category,
+                                                    lane.priority - 1,
+                                                )
+                                            "
+                                            @click="
+                                                moveCategory(
+                                                    category.id,
+                                                    lane.priority - 1,
+                                                )
+                                            "
+                                        >
+                                            <ArrowUp class="size-4" />
+                                            Raise priority
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem
+                                            class="cursor-pointer sm:hidden"
+                                            :disabled="
+                                                !canMoveTo(
+                                                    category,
+                                                    lane.priority + 1,
+                                                )
+                                            "
+                                            @click="
+                                                moveCategory(
+                                                    category.id,
+                                                    lane.priority + 1,
+                                                )
+                                            "
+                                        >
+                                            <ArrowDown class="size-4" />
+                                            Lower priority
+                                        </DropdownMenuItem>
+
                                         <DropdownMenuItem
                                             class="cursor-pointer"
                                             @click="openEdit(category)"

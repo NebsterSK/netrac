@@ -371,7 +371,9 @@ function weekRange(week: Week): string {
             <div
                 class="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-xl border bg-background/95 p-3 backdrop-blur"
             >
-                <span class="text-sm font-medium text-muted-foreground">
+                <span
+                    class="text-sm font-medium text-muted-foreground max-sm:hidden"
+                >
                     Brush:
                 </span>
 
@@ -434,7 +436,11 @@ function weekRange(week: Week): string {
             </p>
 
             <!-- One table per week, newest first -->
-            <Card v-for="week in weeks" :key="week.id" class="self-start">
+            <Card
+                v-for="week in weeks"
+                :key="week.id"
+                class="max-w-full self-start max-sm:self-stretch"
+            >
                 <CardHeader class="flex items-center justify-between gap-2">
                     <CardTitle class="leading-8">
                         {{ weekRange(week) }}
@@ -483,16 +489,16 @@ function weekRange(week: Week): string {
                         <thead>
                             <tr>
                                 <th
-                                    class="px-2 py-1 text-left font-medium"
+                                    class="px-2 py-1 text-left font-medium max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card"
                                 ></th>
 
                                 <th
                                     v-for="goal in week.goals"
                                     :key="goal.id"
-                                    class="max-w-32 px-2 py-1 text-left align-bottom font-medium"
+                                    class="max-w-32 px-2 py-1 text-left align-bottom font-medium max-sm:max-w-9 max-sm:px-0"
                                 >
                                     <span
-                                        class="block truncate"
+                                        class="block truncate max-sm:mx-auto max-sm:max-h-28 max-sm:rotate-180 max-sm:[writing-mode:vertical-rl]"
                                         :title="goal.name"
                                     >
                                         {{ goal.name }}
@@ -507,7 +513,7 @@ function weekRange(week: Week): string {
                                 :key="date"
                             >
                                 <td
-                                    class="px-2 py-1 whitespace-nowrap text-muted-foreground"
+                                    class="px-2 py-1 whitespace-nowrap text-muted-foreground max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card"
                                 >
                                     {{ formatDay(date) }}
                                 </td>

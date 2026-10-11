@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { useMediaQuery } from '@vueuse/core';
 import type { Chart, LegendItem, TooltipItem } from 'chart.js';
 import {
     BarElement,
@@ -212,6 +213,9 @@ const sortedBalances = computed(() =>
 
 const recentBalances = computed(() => sortedBalances.value.slice(-18));
 
+/** Phones get thinner lines and smaller points so dense series stay readable. */
+const isPhone = useMediaQuery('(max-width: 639px)');
+
 const chartData = computed(() => {
     const recent = recentBalances.value;
     const allSorted = sortedBalances.value;
@@ -254,9 +258,9 @@ const chartData = computed(() => {
                 data: rollingAverages,
                 borderColor: 'rgb(99, 102, 241)',
                 backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                borderWidth: 3,
-                pointRadius: 5,
-                pointHoverRadius: 5,
+                borderWidth: isPhone.value ? 2 : 3,
+                pointRadius: isPhone.value ? 2 : 5,
+                pointHoverRadius: isPhone.value ? 3 : 5,
                 tension: 0,
             },
             {

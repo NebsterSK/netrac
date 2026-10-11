@@ -14,6 +14,7 @@ See `README.md` for project overview, stack, setup, and architecture.
 
 - Use Laravel 13 syntax; declare fillable with the `#[Fillable]` attribute.
 - Validate every request with a FormRequest, including `index()` query params.
+- Never set config at runtime in app code (`config([...])`, `config()->set()`, `Config::set()`): it's hidden global state that leaks across requests/jobs and breaks with cached config. Put values in `config/*.php` / `.env` or pass them explicitly. Reading config and setting it in tests is fine.
 
 ### DTOs
 

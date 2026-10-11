@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { GripVertical, Shuffle, Trash2 } from 'lucide-vue-next';
+import {
+    ChevronDown,
+    ChevronUp,
+    GripVertical,
+    Shuffle,
+    Trash2,
+} from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
@@ -355,10 +361,39 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 @drop.prevent="onDragEnd()"
                             >
                                 <div
-                                    class="cursor-grab text-muted-foreground active:cursor-grabbing"
+                                    class="cursor-grab text-muted-foreground active:cursor-grabbing max-sm:hidden"
                                     aria-label="Drag to reorder"
                                 >
                                     <GripVertical class="size-4" />
+                                </div>
+
+                                <div class="-ml-1 flex flex-col sm:hidden">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        class="cursor-pointer text-muted-foreground"
+                                        aria-label="Move up"
+                                        :disabled="index === 0"
+                                        @click="moveExercise(index, index - 1)"
+                                    >
+                                        <ChevronUp class="size-4" />
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        class="cursor-pointer text-muted-foreground"
+                                        aria-label="Move down"
+                                        :disabled="
+                                            index ===
+                                            selectedExercises.length - 1
+                                        "
+                                        @click="moveExercise(index, index + 1)"
+                                    >
+                                        <ChevronDown class="size-4" />
+                                    </Button>
                                 </div>
 
                                 <div class="flex flex-1 flex-col">

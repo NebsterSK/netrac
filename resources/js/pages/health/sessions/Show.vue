@@ -84,7 +84,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <li
                             v-for="exercise in session.exercises"
                             :key="exercise.id"
-                            class="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-muted/50"
+                            class="flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-muted/50 max-sm:py-3"
                         >
                             <Checkbox
                                 :id="`exercise-${exercise.id}`"

@@ -359,7 +359,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     >
                         <thead class="border-b text-muted-foreground">
                             <tr>
-                                <th class="px-4 py-2 font-medium">
+                                <th class="px-2 py-2 font-medium sm:px-4">
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -374,7 +374,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="px-4 py-2 font-medium">
+                                <th class="px-2 py-2 font-medium sm:px-4">
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -389,7 +389,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="px-4 py-2 font-medium">
+                                <th class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4">
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -404,7 +404,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="px-4 py-2 font-medium">
+                                <th class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4">
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -419,7 +419,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="w-0 px-4 py-2"></th>
+                                <th class="w-0 px-2 py-2 sm:px-4"></th>
                             </tr>
                         </thead>
 
@@ -438,11 +438,11 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 :key="exercise.id"
                                 class="border-b transition-colors last:border-0 hover:bg-muted/50"
                             >
-                                <td class="px-4 py-3 font-medium">
+                                <td class="px-2 py-3 font-medium sm:px-4">
                                     {{ exercise.name }}
                                 </td>
 
-                                <td class="px-4 py-3">
+                                <td class="px-2 py-3 sm:px-4">
                                     <div
                                         class="flex flex-wrap items-center gap-1"
                                     >
@@ -463,15 +463,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </div>
                                 </td>
 
-                                <td class="px-4 py-3 text-muted-foreground">
+                                <td class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4">
                                     {{ formatDate(exercise.created_at) }}
                                 </td>
 
-                                <td class="px-4 py-3 text-muted-foreground">
+                                <td class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4">
                                     {{ formatDate(exercise.updated_at) }}
                                 </td>
 
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-2 py-3 text-right sm:px-4">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger as-child>
                                             <button

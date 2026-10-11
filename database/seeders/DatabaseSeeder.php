@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Seeders\Buzerlistok\WeekSeeder;
 use Database\Seeders\Finance\ExpenseSeeder;
 use Database\Seeders\Finance\MonthlyBalanceSeeder;
 use Database\Seeders\Finance\StatementSeeder;
@@ -26,6 +27,7 @@ class DatabaseSeeder extends Seeder
         $this->call(StatementSeeder::class);
         $this->call(ExpenseSeeder::class);
         $this->call(ExerciseSeeder::class);
+        $this->call(WeekSeeder::class);
         //        $this->call(WorkoutSessionSeeder::class);
     }
 }

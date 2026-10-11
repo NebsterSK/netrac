@@ -1,21 +1,11 @@
 {
     "mcpServers": {
         "laravel-boost": {
-            "command": "C:/Users/Lukas/.config/herd/bin/php85/php.exe",
+            "command": "php",
             "args": [
                 "artisan",
                 "boost:mcp"
-            ],
-            "cwd": "E:/webs/template"
-        },
-        "herd": {
-            "command": "C:/Users/Lukas/.config/herd/bin/php85/php.exe",
-            "args": [
-                "C:/Users/Lukas/.config/herd/bin/herd-mcp.phar"
-            ],
-            "env": {
-                "SITE_PATH": "E:\\webs\\template"
-            }
+            ]
         }
     }
 }
