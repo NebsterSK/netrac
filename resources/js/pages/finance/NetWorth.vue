@@ -1073,23 +1073,28 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
                     </div>
 
-                    <div
-                        v-for="col in columns"
-                        :key="col.key"
-                        class="space-y-2"
-                    >
-                        <Label :for="`stmt-${col.key}`">{{ col.label }}</Label>
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-4">
+                        <div
+                            v-for="col in columns"
+                            :key="col.key"
+                            class="space-y-2"
+                        >
+                            <Label :for="`stmt-${col.key}`">{{
+                                col.label
+                            }}</Label>
 
-                        <Input
-                            :id="`stmt-${col.key}`"
-                            v-model="form[col.key]"
-                            type="number"
-                            min="0"
-                            class="[-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            :disabled="form.processing"
-                        />
+                            <Input
+                                :id="`stmt-${col.key}`"
+                                v-model="form[col.key]"
+                                type="number"
+                                min="0"
+                                inputmode="numeric"
+                                class="[-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                :disabled="form.processing"
+                            />
 
-                        <InputError :message="form.errors[col.key]" />
+                            <InputError :message="form.errors[col.key]" />
+                        </div>
                     </div>
 
                     <DialogFooter>
