@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { useMediaQuery } from '@vueuse/core';
-import type { Chart, LegendItem, TooltipItem } from 'chart.js';
+import type {
+    Chart,
+    LegendItem,
+    ScriptableLineSegmentContext,
+    TooltipItem,
+} from 'chart.js';
 import {
     BarElement,
     CategoryScale,
@@ -114,6 +119,34 @@ const realBalances = computed(() =>
 /** Phones get thinner lines and smaller points so dense series stay readable. */
 const isPhone = useMediaQuery('(max-width: 639px)');
 
+/**
+ * Diagonal stripes for a draft bar, echoing the striped draft rows in the table.
+ */
+function stripePattern(color: string): CanvasPattern | string {
+    const tile = document.createElement('canvas');
+    tile.width = 8;
+    tile.height = 8;
+
+    const context = tile.getContext('2d');
+
+    if (!context) {
+        return color;
+    }
+
+    context.strokeStyle = color;
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(0, 8);
+    context.lineTo(8, 0);
+    context.moveTo(-2, 2);
+    context.lineTo(2, -2);
+    context.moveTo(6, 10);
+    context.lineTo(10, 6);
+    context.stroke();
+
+    return context.createPattern(tile, 'repeat') ?? color;
+}
+
 const chartData = computed(() => {
     const recent = recentBalances.value;
     const allSorted = realBalances.value;
@@ -158,23 +191,36 @@ const chartData = computed(() => {
                 backgroundColor: 'rgba(99, 102, 241, 0.1)',
                 borderWidth: isPhone.value ? 2 : 3,
                 pointRadius: isPhone.value ? 2 : 5,
+                pointBackgroundColor: recent.map((bal) =>
+                    bal.is_draft ? 'transparent' : 'rgb(99, 102, 241)',
+                ),
                 pointHoverRadius: isPhone.value ? 3 : 5,
                 tension: 0,
+                segment: {
+                    borderDash: (ctx: ScriptableLineSegmentContext) =>
+                        recent[ctx.p1DataIndex]?.is_draft ? [6, 6] : undefined,
+                },
             },
             {
                 label: 'Balance',
                 data: amounts,
                 backgroundColor: recent.map((bal) => {
-                    const alpha = bal.is_draft ? 0.25 : 0.8;
+                    if (bal.is_draft) {
+                        return stripePattern(
+                            bal.amount >= 0
+                                ? 'rgba(34, 197, 94, 0.6)'
+                                : 'rgba(239, 68, 68, 0.6)',
+                        );
+                    }
 
                     return bal.amount >= 0
-                        ? `rgba(34, 197, 94, ${alpha})`
-                        : `rgba(239, 68, 68, ${alpha})`;
+                        ? 'rgba(34, 197, 94, 0.8)'
+                        : 'rgba(239, 68, 68, 0.8)';
                 }),
                 borderColor: amounts.map((val) =>
                     val >= 0 ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)',
                 ),
-                borderWidth: 1,
+                borderWidth: recent.map((bal) => (bal.is_draft ? 2 : 1)),
                 borderRadius: 4,
             },
         ],
