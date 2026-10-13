@@ -30,7 +30,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix('finance')->name('finance.')->group(function () {
-        Route::resource('/monthly-balance', MonthlyBalanceController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::get('/monthly-balance', [MonthlyBalanceController::class, 'index'])->name('monthly-balance.index');
         Route::resource('/net-worth', NetWorthController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['net-worth' => 'statement']);
         Route::resource('/expenses', ExpenseController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::put('/expense-categories/reorder', [ExpenseCategoryController::class, 'reorder'])->name('expense-categories.reorder');

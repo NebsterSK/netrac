@@ -53,10 +53,10 @@ average: number,
 count: number,
 };
 export type MonthlyBalanceData = {
-id: number,
 date: string,
 amount: number,
-comment: string | null,
+note: string | null,
+is_draft: boolean,
 };
 export type PeriodAveragesData = {
 last6: number | null,
@@ -73,6 +73,7 @@ uniqa_sds: number,
 uniqa_dds: number,
 finax: number,
 trading212: number,
+note: string | null,
 is_draft: boolean,
 };
 }

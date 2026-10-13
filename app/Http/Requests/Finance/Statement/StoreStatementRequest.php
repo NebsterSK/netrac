@@ -21,6 +21,7 @@ class StoreStatementRequest extends FormRequest
             'uniqa_dds' => ['required', 'integer', 'min:0', 'max:2147483647'],
             'finax' => ['required', 'integer', 'min:0', 'max:2147483647'],
             'trading212' => ['required', 'integer', 'min:0', 'max:2147483647'],
+            'note' => ['nullable', 'string', 'max:255'],
             'is_draft' => ['required', 'boolean'],
         ];
     }

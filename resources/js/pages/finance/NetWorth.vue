@@ -19,6 +19,7 @@ import {
     ChevronLeft,
     ChevronRight,
     EllipsisVertical,
+    MessageSquare,
     Pencil,
     Plus,
     Trash2,
@@ -52,6 +53,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Tooltip,
     TooltipContent,
@@ -101,8 +103,55 @@ const form = useForm({
     uniqa_dds: undefined as number | undefined,
     finax: undefined as number | undefined,
     trading212: undefined as number | undefined,
+    note: '',
     is_draft: false,
 });
+
+type AmountKey = (typeof columns)[number]['key'];
+
+/** Values last prefilled into the create form, to tell untouched fields from edited ones. */
+const prefilledAmounts = ref<Partial<Record<AmountKey, number>>>({});
+
+function roundUpToHundred(amount: number): number {
+    return Math.ceil(amount / 100) * 100;
+}
+
+/**
+ * Prefill the create form with the statement preceding the selected month,
+ * rounded up to the nearest hundred. Fields the user already changed are kept.
+ */
+function prefillFromPreviousStatement() {
+    const selectedKey = form.date ? monthKey(form.date) : null;
+
+    const previous = sortedStatements.value
+        .filter(
+            (statement) =>
+                selectedKey === null || monthKey(statement.date) < selectedKey,
+        )
+        .at(-1);
+
+    const nextPrefill: Partial<Record<AmountKey, number>> = {};
+
+    for (const col of columns) {
+        const isUntouched =
+            form[col.key] === undefined ||
+            form[col.key] === prefilledAmounts.value[col.key];
+
+        const amount = previous
+            ? roundUpToHundred(previous[col.key])
+            : undefined;
+
+        if (isUntouched) {
+            form[col.key] = amount;
+        }
+
+        if (amount !== undefined) {
+            nextPrefill[col.key] = amount;
+        }
+    }
+
+    prefilledAmounts.value = nextPrefill;
+}
 
 function openCreate() {
     editingStatement.value = null;
@@ -113,7 +162,10 @@ function openCreate() {
     form.uniqa_dds = undefined;
     form.finax = undefined;
     form.trading212 = undefined;
+    form.note = '';
     form.is_draft = false;
+    prefilledAmounts.value = {};
+    prefillFromPreviousStatement();
     pickerYear.value = new Date().getFullYear();
     showDialog.value = true;
 }
@@ -128,6 +180,7 @@ function openEdit(statement: Statement) {
     form.uniqa_dds = statement.uniqa_dds;
     form.finax = statement.finax;
     form.trading212 = statement.trading212;
+    form.note = statement.note ?? '';
     form.is_draft = statement.is_draft;
     pickerYear.value = date.getFullYear();
     showDialog.value = true;
@@ -201,6 +254,10 @@ function toggleDraft(checked: boolean | 'indeterminate') {
 
 function selectMonth(month: number) {
     form.date = `${pickerYear.value}-${String(month).padStart(2, '0')}-01`;
+
+    if (!isEditing.value) {
+        prefillFromPreviousStatement();
+    }
 }
 
 function submitForm() {
@@ -210,7 +267,10 @@ function submitForm() {
 
     const method = isEditing.value ? 'put' : 'post';
 
-    form[method](url, {
+    form.transform((data) => ({
+        ...data,
+        note: data.note.trim() || null,
+    }))[method](url, {
         onSuccess: () => {
             showDialog.value = false;
             editingStatement.value = null;
@@ -228,6 +288,7 @@ function finalizeStatement(statement: Statement) {
         uniqa_dds: statement.uniqa_dds,
         finax: statement.finax,
         trading212: statement.trading212,
+        note: statement.note,
         is_draft: false,
     });
 }
@@ -737,6 +798,26 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                     formatMonth(statement.date)
                                                 }}
 
+                                                <TooltipProvider
+                                                    v-if="statement.note"
+                                                >
+                                                    <Tooltip>
+                                                        <TooltipTrigger
+                                                            as-child
+                                                        >
+                                                            <MessageSquare
+                                                                class="size-3.5 shrink-0 cursor-pointer"
+                                                            />
+                                                        </TooltipTrigger>
+
+                                                        <TooltipContent
+                                                            side="right"
+                                                        >
+                                                            {{ statement.note }}
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+
                                                 <Badge
                                                     v-if="statement.is_draft"
                                                     variant="outline"
@@ -1095,6 +1176,26 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                             <InputError :message="form.errors[col.key]" />
                         </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="stmt-note">
+                            Note
+                            <span class="font-normal text-muted-foreground">
+                                (optional)
+                            </span>
+                        </Label>
+
+                        <Textarea
+                            id="stmt-note"
+                            v-model="form.note"
+                            maxlength="255"
+                            rows="2"
+                            placeholder="Explains this month's balance"
+                            :disabled="form.processing"
+                        />
+
+                        <InputError :message="form.errors.note" />
                     </div>
 
                     <DialogFooter>

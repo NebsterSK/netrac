@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Finance\MonthlyBalance;
+use App\Models\Finance\Statement;
 use Inertia\Testing\AssertableInertia as Assert;
 
 describe('access control', function () {
@@ -17,96 +17,44 @@ describe('access control', function () {
     });
 });
 
-it('lists balances newest first', function () {
-    MonthlyBalance::factory()->create(['date' => '2024-01-01', 'amount' => 100]);
-    MonthlyBalance::factory()->create(['date' => '2024-03-01', 'amount' => 300]);
+it('derives each balance from the account change since the previous statement, newest first', function () {
+    Statement::factory()->create(['date' => '2024-01-01', 'account' => 1000]);
+    Statement::factory()->create(['date' => '2024-02-01', 'account' => 1500, 'note' => 'Bonus']);
+    Statement::factory()->create(['date' => '2024-03-01', 'account' => 1200]);
 
     $this->actingAs(verifiedUser())
         ->get(route('finance.monthly-balance.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('finance/MonthlyBalance')
             ->has('balances', 2)
-            ->where('balances.0.amount', 300)
-            ->has('existingDates', 2));
+            ->where('balances.0.date', '2024-03-01')
+            ->where('balances.0.amount', -300)
+            ->where('balances.0.note', null)
+            ->where('balances.1.date', '2024-02-01')
+            ->where('balances.1.amount', 500)
+            ->where('balances.1.note', 'Bonus'));
 });
 
-it('stores a balance', function () {
-    $this->actingAs(verifiedUser())
-        ->post(route('finance.monthly-balance.store'), [
-            'date' => '2024-05-01',
-            'amount' => 1500,
-            'comment' => 'Savings',
-        ])
-        ->assertRedirect(route('finance.monthly-balance.index'))
-        ->assertSessionHas('success');
-
-    $this->assertDatabaseHas('monthly_balances', ['amount' => 1500, 'comment' => 'Savings']);
-    expect(MonthlyBalance::sole()->date->toDateString())->toBe('2024-05-01');
-});
-
-it('requires date and amount on store', function () {
-    $this->actingAs(verifiedUser())
-        ->from(route('finance.monthly-balance.index'))
-        ->post(route('finance.monthly-balance.store'), [])
-        ->assertSessionHasErrors(['date', 'amount']);
-});
-
-it('rejects a duplicate date on store', function () {
-    MonthlyBalance::factory()->create(['date' => '2024-06-01']);
+it('yields no balance from a single statement', function () {
+    Statement::factory()->create(['date' => '2024-01-01']);
 
     $this->actingAs(verifiedUser())
-        ->from(route('finance.monthly-balance.index'))
-        ->post(route('finance.monthly-balance.store'), [
-            'date' => '2024-06-01',
-            'amount' => 200,
-        ])
-        ->assertSessionHasErrors('date');
+        ->get(route('finance.monthly-balance.index'))
+        ->assertInertia(fn (Assert $page) => $page->has('balances', 0));
 });
 
-it('blocks guests from storing', function () {
-    $this->post(route('finance.monthly-balance.store'), [
-        'date' => '2024-05-01',
-        'amount' => 1500,
-    ])->assertRedirect(route('login'));
-
-    expect(MonthlyBalance::count())->toBe(0);
-});
-
-it('updates a balance', function () {
-    $balance = MonthlyBalance::factory()->create(['date' => '2024-07-01', 'amount' => 100]);
+it('marks the balance of a draft statement as a draft', function () {
+    Statement::factory()->create(['date' => '2024-01-01', 'account' => 1000]);
+    Statement::factory()->draft()->create(['date' => '2024-02-01', 'account' => 1400]);
 
     $this->actingAs(verifiedUser())
-        ->patch(route('finance.monthly-balance.update', $balance), [
-            'date' => '2024-08-01',
-            'amount' => 250,
-            'comment' => null,
-        ])
-        ->assertRedirect(route('finance.monthly-balance.index'))
-        ->assertSessionHas('success');
-
-    expect($balance->refresh()->amount)->toBe(250)
-        ->and($balance->date->toDateString())->toBe('2024-08-01');
+        ->get(route('finance.monthly-balance.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('balances.0.amount', 400)
+            ->where('balances.0.is_draft', true));
 });
 
-it('allows keeping the same date on update', function () {
-    $balance = MonthlyBalance::factory()->create(['date' => '2024-09-01']);
-
+it('no longer accepts manual balances', function () {
     $this->actingAs(verifiedUser())
-        ->patch(route('finance.monthly-balance.update', $balance), [
-            'date' => '2024-09-01',
-            'amount' => 999,
-            'comment' => null,
-        ])
-        ->assertSessionHasNoErrors();
-});
-
-it('deletes a balance', function () {
-    $balance = MonthlyBalance::factory()->create();
-
-    $this->actingAs(verifiedUser())
-        ->delete(route('finance.monthly-balance.destroy', $balance))
-        ->assertRedirect(route('finance.monthly-balance.index'))
-        ->assertSessionHas('success');
-
-    $this->assertModelMissing($balance);
+        ->post('/finance/monthly-balance', ['date' => '2024-05-01', 'amount' => 1500])
+        ->assertMethodNotAllowed();
 });

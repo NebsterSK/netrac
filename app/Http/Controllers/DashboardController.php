@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Data\Finance\ExpenseCategoryBreakdownData;
 use App\Data\Finance\MonthlyAverageData;
+use App\Data\Finance\MonthlyBalanceData;
 use App\Data\Finance\PeriodAveragesData;
 use App\Models\Finance\ExpenseCategory;
-use App\Models\Finance\MonthlyBalance;
-use Illuminate\Support\Facades\DB;
+use App\Models\Finance\Statement;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,24 +16,26 @@ class DashboardController extends Controller
 {
     public function __invoke(): Response
     {
-        $monthlyAverages = MonthlyBalance::query()
-            ->select(
-                DB::raw('EXTRACT(MONTH FROM date) as month'),
-                DB::raw('ROUND(AVG(amount)) as average'),
-                DB::raw('COUNT(*) as count'),
-            )
-            ->withCasts(['month' => 'integer', 'average' => 'integer', 'count' => 'integer'])
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get();
+        $balances = MonthlyBalanceData::fromStatements(Statement::all())
+            ->reject(fn (MonthlyBalanceData $balance): bool => $balance->is_draft);
 
-        $balances = MonthlyBalance::orderBy('date', 'desc')->pluck('amount');
+        $monthlyAverages = $balances
+            ->groupBy(fn (MonthlyBalanceData $balance): int => (int) substr($balance->date, 5, 2))
+            ->sortKeys()
+            ->map(fn (Collection $group, int $month): array => [
+                'month' => $month,
+                'average' => (int) round($group->avg('amount')),
+                'count' => $group->count(),
+            ])
+            ->values();
+
+        $amounts = $balances->reverse()->pluck('amount')->values();
 
         $periodAverages = [
-            'last6' => $balances->take(6)->isEmpty() ? null : (int) round($balances->take(6)->avg()),
-            'last12' => $balances->take(12)->isEmpty() ? null : (int) round($balances->take(12)->avg()),
-            'last18' => $balances->take(18)->isEmpty() ? null : (int) round($balances->take(18)->avg()),
-            'overall' => $balances->isEmpty() ? null : (int) round($balances->avg()),
+            'last6' => $amounts->take(6)->isEmpty() ? null : (int) round($amounts->take(6)->avg()),
+            'last12' => $amounts->take(12)->isEmpty() ? null : (int) round($amounts->take(12)->avg()),
+            'last18' => $amounts->take(18)->isEmpty() ? null : (int) round($amounts->take(18)->avg()),
+            'overall' => $amounts->isEmpty() ? null : (int) round($amounts->avg()),
         ];
 
         $expenseCategories = ExpenseCategory::query()

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { useMediaQuery } from '@vueuse/core';
 import type { Chart, LegendItem, TooltipItem } from 'chart.js';
 import {
@@ -14,44 +14,17 @@ import {
     Title,
     Tooltip as ChartTooltip,
 } from 'chart.js';
-import {
-    ArrowUp,
-    ChevronLeft,
-    ChevronRight,
-    EllipsisVertical,
-    MessageSquare,
-    Pencil,
-    Plus,
-    Trash2,
-} from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { ArrowUp, MessageSquare } from 'lucide-vue-next';
+import { computed } from 'vue';
 import { Bar } from 'vue-chartjs';
-import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
     Card,
-    CardAction,
     CardContent,
+    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Tooltip,
     TooltipContent,
@@ -61,95 +34,15 @@ import {
 import { useAppearance } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
-import {
-    destroy,
-    index,
-    store,
-    update,
-} from '@/routes/finance/monthly-balance';
+import { index } from '@/routes/finance/monthly-balance';
+import { index as netWorthIndex } from '@/routes/finance/net-worth';
 import type { BreadcrumbItem } from '@/types';
 
 type Balance = App.Data.Finance.MonthlyBalanceData;
 
 const props = defineProps<{
     balances: Balance[];
-    existingDates: string[];
 }>();
-
-const showDialog = ref(false);
-const editingBalance = ref<Balance | null>(null);
-const isEditing = computed(() => editingBalance.value !== null);
-const pickerYear = ref(new Date().getFullYear());
-
-const shortMonths = Array.from({ length: 12 }, (_, idx) =>
-    new Date(2000, idx).toLocaleDateString('en-US', { month: 'short' }),
-);
-
-const form = useForm({
-    date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
-    amount: undefined as number | undefined,
-    comment: '',
-});
-
-function openCreate() {
-    editingBalance.value = null;
-    form.date = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
-    form.amount = undefined;
-    form.comment = '';
-    pickerYear.value = new Date().getFullYear();
-    showDialog.value = true;
-}
-
-function openEdit(balance: Balance) {
-    editingBalance.value = balance;
-    const date = new Date(balance.date);
-    form.date = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
-    form.amount = balance.amount;
-    form.comment = balance.comment ?? '';
-    pickerYear.value = date.getFullYear();
-    showDialog.value = true;
-}
-
-const selectedYear = computed(() => parseInt(form.date.split('-')[0]));
-const selectedMonth = computed(() => parseInt(form.date.split('-')[1]));
-
-function isMonthDisabled(month: number): boolean {
-    const key = `${pickerYear.value}-${String(month).padStart(2, '0')}`;
-
-    return props.existingDates.some((date) => date.startsWith(key));
-}
-
-function selectMonth(month: number) {
-    form.date = `${pickerYear.value}-${String(month).padStart(2, '0')}-01`;
-}
-
-function submitForm() {
-    const url = isEditing.value
-        ? update.url(editingBalance.value!.id)
-        : store.url();
-
-    const method = isEditing.value ? 'put' : 'post';
-
-    form.transform((data) => ({
-        date: data.date,
-        amount: data.amount,
-        comment: data.comment || null,
-    }))[method](url, {
-        onSuccess: () => {
-            showDialog.value = false;
-            editingBalance.value = null;
-            form.reset();
-        },
-    });
-}
-
-function deleteBalance(balance: Balance) {
-    if (!confirm('Are you sure you want to delete this balance entry?')) {
-        return;
-    }
-
-    router.delete(destroy.url(balance.id));
-}
 
 function formatMonth(date: string): string {
     return new Date(date).toLocaleDateString('en-US', { month: 'long' });
@@ -164,7 +57,7 @@ function getYear(date: string): number {
 }
 
 const averageBalance = computed(() => {
-    const recent = recentBalances.value;
+    const recent = recentBalances.value.filter((bal) => !bal.is_draft);
 
     if (recent.length === 0) {
         return 0;
@@ -213,12 +106,17 @@ const sortedBalances = computed(() =>
 
 const recentBalances = computed(() => sortedBalances.value.slice(-18));
 
+// A draft month is a prediction, so it never feeds the averages.
+const realBalances = computed(() =>
+    sortedBalances.value.filter((bal) => !bal.is_draft),
+);
+
 /** Phones get thinner lines and smaller points so dense series stay readable. */
 const isPhone = useMediaQuery('(max-width: 639px)');
 
 const chartData = computed(() => {
     const recent = recentBalances.value;
-    const allSorted = sortedBalances.value;
+    const allSorted = realBalances.value;
     const labels = recent.map((bal) => {
         const date = new Date(bal.date);
 
@@ -266,11 +164,13 @@ const chartData = computed(() => {
             {
                 label: 'Balance',
                 data: amounts,
-                backgroundColor: amounts.map((val) =>
-                    val >= 0
-                        ? 'rgba(34, 197, 94, 0.8)'
-                        : 'rgba(239, 68, 68, 0.8)',
-                ),
+                backgroundColor: recent.map((bal) => {
+                    const alpha = bal.is_draft ? 0.25 : 0.8;
+
+                    return bal.amount >= 0
+                        ? `rgba(34, 197, 94, ${alpha})`
+                        : `rgba(239, 68, 68, ${alpha})`;
+                }),
                 borderColor: amounts.map((val) =>
                     val >= 0 ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)',
                 ),
@@ -392,16 +292,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <CardHeader>
                     <CardTitle class="leading-8">Table</CardTitle>
 
-                    <CardAction>
-                        <Button
-                            size="icon-sm"
-                            variant="outline"
-                            class="cursor-pointer"
-                            @click="openCreate()"
+                    <CardDescription>
+                        Change of Account since the previous
+                        <Link
+                            :href="netWorthIndex()"
+                            class="underline underline-offset-4 hover:text-foreground"
                         >
-                            <Plus class="size-3" />
-                        </Button>
-                    </CardAction>
+                            net worth
+                        </Link>
+                        statement.
+                    </CardDescription>
                 </CardHeader>
 
                 <CardContent>
@@ -424,9 +324,17 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </span>
                     </div>
 
+                    <p
+                        v-else
+                        class="py-6 text-center text-sm text-muted-foreground"
+                    >
+                        Add at least 2 net worth statements to see monthly
+                        balances.
+                    </p>
+
                     <table
                         class="w-full text-left text-sm"
-                        aria-label="Monthly balance entries"
+                        aria-label="Monthly balances"
                     >
                         <template
                             v-for="[year, balances] in groupedByYear"
@@ -435,44 +343,13 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <tbody>
                                 <tr
                                     v-for="balance in balances"
-                                    :key="balance.id"
-                                    class="group/row border-b transition-colors last:border-0 hover:bg-muted/50"
+                                    :key="balance.date"
+                                    class="border-b transition-colors last:border-0 hover:bg-muted/50"
+                                    :class="{
+                                        'bg-[repeating-linear-gradient(-45deg,transparent_0_6px,var(--color-muted)_6px_12px)] italic opacity-70':
+                                            balance.is_draft,
+                                    }"
                                 >
-                                    <td class="w-0 pl-4">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger as-child>
-                                                <button
-                                                    class="flex h-full cursor-pointer items-center"
-                                                    aria-label="Actions"
-                                                >
-                                                    <EllipsisVertical
-                                                        class="size-4 text-muted-foreground"
-                                                    />
-                                                </button>
-                                            </DropdownMenuTrigger>
-
-                                            <DropdownMenuContent align="start">
-                                                <DropdownMenuItem
-                                                    class="cursor-pointer"
-                                                    @click="openEdit(balance)"
-                                                >
-                                                    <Pencil class="size-4" />
-                                                    Edit
-                                                </DropdownMenuItem>
-
-                                                <DropdownMenuItem
-                                                    class="cursor-pointer text-red-600 dark:text-red-400"
-                                                    @click="
-                                                        deleteBalance(balance)
-                                                    "
-                                                >
-                                                    <Trash2 class="size-4" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </td>
-
                                     <td class="px-4 py-3">
                                         <span
                                             class="flex items-center gap-1 text-muted-foreground"
@@ -480,7 +357,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                             {{ formatMonth(balance.date) }}
 
                                             <TooltipProvider
-                                                v-if="balance.comment"
+                                                v-if="balance.note"
                                             >
                                                 <Tooltip>
                                                     <TooltipTrigger as-child>
@@ -492,10 +369,18 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                     <TooltipContent
                                                         side="right"
                                                     >
-                                                        {{ balance.comment }}
+                                                        {{ balance.note }}
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>
+
+                                            <Badge
+                                                v-if="balance.is_draft"
+                                                variant="outline"
+                                                class="ml-1 border-dashed not-italic"
+                                            >
+                                                Draft
+                                            </Badge>
                                         </span>
                                     </td>
 
@@ -515,7 +400,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 <tr class="border-b bg-muted/50 last:border-0">
                                     <td
                                         class="px-4 py-3 font-semibold"
-                                        colspan="3"
+                                        colspan="2"
                                     >
                                         <span class="flex items-center gap-1">
                                             <ArrowUp class="size-4" />
@@ -541,138 +426,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
 
                     <p v-else class="text-center text-sm text-muted-foreground">
-                        Add at least 2 balance entries to see the chart.
+                        Add at least 3 net worth statements to see the chart.
                     </p>
                 </CardContent>
             </Card>
         </div>
-
-        <Dialog v-model:open="showDialog">
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{{
-                        isEditing
-                            ? 'Edit Monthly Balance'
-                            : 'Add Monthly Balance'
-                    }}</DialogTitle>
-                </DialogHeader>
-
-                <form @submit.prevent="submitForm" class="space-y-4">
-                    <InputError :message="form.errors.date" />
-
-                    <div class="space-y-2">
-                        <Label>Date</Label>
-
-                        <div
-                            class="rounded-md border p-3"
-                            :class="{
-                                'pointer-events-none opacity-50':
-                                    isEditing || form.processing,
-                            }"
-                        >
-                            <div class="mb-3 flex items-center justify-between">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    class="cursor-pointer"
-                                    @click="pickerYear--"
-                                >
-                                    <ChevronLeft class="size-4" />
-                                </Button>
-
-                                <span class="text-sm font-medium">{{
-                                    pickerYear
-                                }}</span>
-
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    class="cursor-pointer"
-                                    @click="pickerYear++"
-                                >
-                                    <ChevronRight class="size-4" />
-                                </Button>
-                            </div>
-
-                            <div class="grid grid-cols-4 gap-1">
-                                <Button
-                                    v-for="(name, idx) in shortMonths"
-                                    :key="idx"
-                                    type="button"
-                                    :variant="
-                                        selectedYear === pickerYear &&
-                                        selectedMonth === idx + 1
-                                            ? 'default'
-                                            : 'ghost'
-                                    "
-                                    size="sm"
-                                    class="cursor-pointer"
-                                    :disabled="isMonthDisabled(idx + 1)"
-                                    @click="selectMonth(idx + 1)"
-                                >
-                                    {{ name }}
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label for="balance-amount">Amount</Label>
-
-                        <Input
-                            id="balance-amount"
-                            v-model="form.amount"
-                            type="number"
-                            class="h-14 text-2xl [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            :disabled="form.processing"
-                        />
-
-                        <InputError :message="form.errors.amount" />
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label for="balance-comment"
-                            >Comment
-                            <span class="font-normal text-muted-foreground"
-                                >(optional)</span
-                            ></Label
-                        >
-
-                        <Textarea
-                            id="balance-comment"
-                            v-model="form.comment"
-                            maxlength="255"
-                            rows="4"
-                            :disabled="form.processing"
-                        />
-
-                        <InputError :message="form.errors.comment" />
-                    </div>
-
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            class="cursor-pointer"
-                            :disabled="form.processing"
-                            @click="showDialog = false"
-                        >
-                            Cancel
-                        </Button>
-
-                        <Button
-                            type="submit"
-                            class="cursor-pointer"
-                            :disabled="form.processing"
-                        >
-                            <Spinner v-if="form.processing" />
-                            {{ isEditing ? 'Update' : 'Create' }}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
     </AppLayout>
 </template>

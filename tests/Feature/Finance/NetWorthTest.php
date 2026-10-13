@@ -94,6 +94,23 @@ it('updates a statement', function () {
         ->and($statement->date->toDateString())->toBe('2024-08-01');
 });
 
+it('stores a note with a statement', function () {
+    $this->actingAs(verifiedUser())
+        ->post(route('finance.net-worth.store'), statementPayload(['note' => 'Wedding gifts']))
+        ->assertRedirect(route('finance.net-worth.index'));
+
+    expect(Statement::sole()->note)->toBe('Wedding gifts');
+});
+
+it('rejects a note longer than 255 characters', function () {
+    $this->actingAs(verifiedUser())
+        ->from(route('finance.net-worth.index'))
+        ->post(route('finance.net-worth.store'), statementPayload(['note' => str_repeat('a', 256)]))
+        ->assertSessionHasErrors(['note' => 'The note field must not be greater than 255 characters.']);
+
+    expect(Statement::count())->toBe(0);
+});
+
 it('deletes a statement', function () {
     $statement = Statement::factory()->create();
 
