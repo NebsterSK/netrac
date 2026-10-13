@@ -15,7 +15,6 @@ use Illuminate\Support\Carbon;
  * @property int $goal_id
  * @property Carbon $marked_on
  * @property MarkStatus $status
- * @property string|null $comment
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Goal $goal
@@ -34,7 +33,7 @@ use Illuminate\Support\Carbon;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['goal_id', 'marked_on', 'status', 'comment'])]
+#[Fillable(['goal_id', 'marked_on', 'status'])]
 class Mark extends Model
 {
     /** @use HasFactory<MarkFactory> */

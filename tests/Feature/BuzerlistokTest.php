@@ -108,33 +108,17 @@ describe('painting marks', function () {
         expect(Mark::sole()->status)->toBe(MarkStatus::Fail);
     });
 
-    it('requires a comment for the not-applicable status', function () {
+    it('rejects the removed not-applicable status', function () {
         $goal = Goal::factory()->create();
 
         $this->actingAs(verifiedUser())
             ->put(route('buzerlistok.goals.marks.update', $goal), [
                 'marked_on' => '2026-07-06',
-                'status' => MarkStatus::NotApplicable->value,
+                'status' => 'na',
             ])
-            ->assertSessionHasErrors('comment');
+            ->assertSessionHasErrors('status');
 
         expect(Mark::count())->toBe(0);
-    });
-
-    it('stores a comment with the not-applicable status', function () {
-        $goal = Goal::factory()->create();
-
-        $this->actingAs(verifiedUser())
-            ->put(route('buzerlistok.goals.marks.update', $goal), [
-                'marked_on' => '2026-07-06',
-                'status' => MarkStatus::NotApplicable->value,
-                'comment' => 'Rest day',
-            ]);
-
-        $mark = Mark::sole();
-
-        expect($mark->status)->toBe(MarkStatus::NotApplicable);
-        expect($mark->comment)->toBe('Rest day');
     });
 
     it('erases a mark when the status is null', function () {

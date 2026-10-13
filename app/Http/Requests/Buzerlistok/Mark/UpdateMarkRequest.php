@@ -16,17 +16,6 @@ class UpdateMarkRequest extends FormRequest
         return [
             'marked_on' => ['required', 'date'],
             'status' => ['nullable', Rule::enum(MarkStatus::class)],
-            'comment' => ['nullable', 'required_if:status,'.MarkStatus::NotApplicable->value, 'string', 'max:1000'],
-        ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function messages(): array
-    {
-        return [
-            'comment.required_if' => 'A comment is required when the goal does not apply.',
         ];
     }
 }

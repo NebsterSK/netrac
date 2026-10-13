@@ -28,10 +28,7 @@ class MarkController extends Controller
 
             $goal->marks()->updateOrCreate(
                 ['marked_on' => $markedOn],
-                [
-                    'status' => $status,
-                    'comment' => $request->validated('comment'),
-                ],
+                ['status' => $status],
             );
         } catch (Throwable $error) {
             Log::error('Failed to update buzerlistok mark', [

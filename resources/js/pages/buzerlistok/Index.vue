@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { useIntervalFn } from '@vueuse/core';
 import {
     Check,
     Eraser,
     Minus,
-    MessageSquareText,
     Pencil,
     Plus,
     Trash2,
     X,
 } from 'lucide-vue-next';
-import { computed, reactive, ref } from 'vue';
+import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +25,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import buzerlistok from '@/routes/buzerlistok';
@@ -82,14 +81,6 @@ const PALETTE: PaletteEntry[] = [
         cell: 'bg-blue-500 dark:bg-blue-600',
         glyph: Minus,
         glyphClass: 'text-white',
-    },
-    {
-        brush: 'na',
-        label: 'Does not apply (comment)',
-        swatch: 'bg-neutral-700 dark:bg-neutral-400 border border-neutral-500 dark:border-neutral-300',
-        cell: 'bg-neutral-700 dark:bg-neutral-400 border border-neutral-500 dark:border-neutral-300',
-        glyph: MessageSquareText,
-        glyphClass: 'text-white dark:text-neutral-900',
     },
     {
         brush: 'fail',
@@ -151,6 +142,48 @@ function markFor(goalId: number, date: string): Mark | undefined {
     return markIndex.value.get(cellKey(goalId, date));
 }
 
+// --- Day status -----------------------------------------------------------
+
+type DayStatus = 'success' | 'fail';
+
+function todayString(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const date = String(now.getDate()).padStart(2, '0');
+
+    return `${now.getFullYear()}-${month}-${date}`;
+}
+
+const today = ref(todayString());
+
+useIntervalFn(() => {
+    today.value = todayString();
+}, 60_000);
+
+/**
+ * Derived, never stored: a single failed goal fails the day; otherwise a day
+ * with every goal marked succeeds. Past days must resolve, so an unmarked goal
+ * counts as failed. Today stays open until it is fully marked, and future
+ * days have no status.
+ */
+function dayStatus(week: Week, date: string): DayStatus | null {
+    if (week.goals.length === 0 || date > today.value) {
+        return null;
+    }
+
+    const statuses = week.goals.map((goal) => markFor(goal.id, date)?.status);
+
+    if (statuses.includes('fail')) {
+        return 'fail';
+    }
+
+    if (statuses.every((status) => status !== undefined)) {
+        return 'success';
+    }
+
+    return date < today.value ? 'fail' : null;
+}
+
 // Dates run newest-first down each table.
 function daysDescending(week: Week): string[] {
     return [...week.days].reverse();
@@ -162,8 +195,6 @@ function submitMark(
     goalId: number,
     date: string,
     status: MarkStatus | null,
-    comment: string | null,
-    onSuccess?: () => void,
 ) {
     if (submitting.value) {
         return;
@@ -173,57 +204,13 @@ function submitMark(
 
     router.put(
         marks.update.url(goalId),
-        { marked_on: date, status, comment },
+        { marked_on: date, status },
         {
             preserveScroll: true,
             preserveState: true,
-            onSuccess,
             onFinish: () => {
                 submitting.value = false;
             },
-        },
-    );
-}
-
-// --- Comment dialog (black / N/A) ----------------------------------------
-
-const commentState = reactive<{
-    open: boolean;
-    goalId: number | null;
-    date: string | null;
-    text: string;
-}>({
-    open: false,
-    goalId: null,
-    date: null,
-    text: '',
-});
-
-function openCommentDialog(goalId: number, date: string) {
-    const existing = markFor(goalId, date);
-
-    commentState.goalId = goalId;
-    commentState.date = date;
-    commentState.text = existing?.comment ?? '';
-    commentState.open = true;
-}
-
-function saveComment() {
-    if (
-        commentState.goalId === null ||
-        commentState.date === null ||
-        commentState.text.trim() === ''
-    ) {
-        return;
-    }
-
-    submitMark(
-        commentState.goalId,
-        commentState.date,
-        'na',
-        commentState.text.trim(),
-        () => {
-            commentState.open = false;
         },
     );
 }
@@ -234,18 +221,12 @@ function paintCell(goalId: number, date: string) {
     }
 
     if (activeBrush.value === 'erase') {
-        submitMark(goalId, date, null, null);
+        submitMark(goalId, date, null);
 
         return;
     }
 
-    if (activeBrush.value === 'na') {
-        openCommentDialog(goalId, date);
-
-        return;
-    }
-
-    submitMark(goalId, date, activeBrush.value, null);
+    submitMark(goalId, date, activeBrush.value);
 }
 
 // --- Create week dialog ---------------------------------------------------
@@ -474,7 +455,7 @@ function weekRange(week: Week): string {
                     </div>
                 </CardHeader>
 
-                <CardContent class="overflow-x-auto">
+                <CardContent class="overflow-x-auto max-sm:px-4">
                     <p
                         v-if="week.goals.length === 0"
                         class="py-4 text-center text-sm text-muted-foreground"
@@ -489,7 +470,7 @@ function weekRange(week: Week): string {
                         <thead>
                             <tr>
                                 <th
-                                    class="px-2 py-1 text-left font-medium max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card"
+                                    class="px-2 py-1 text-left font-medium max-sm:sticky max-sm:pl-0 max-sm:left-0 max-sm:z-10 max-sm:bg-card"
                                 ></th>
 
                                 <th
@@ -504,6 +485,16 @@ function weekRange(week: Week): string {
                                         {{ goal.name }}
                                     </span>
                                 </th>
+
+                                <th
+                                    class="px-2 py-1 pl-3 text-left align-bottom font-medium max-sm:max-w-9 max-sm:px-0 max-sm:pl-1"
+                                >
+                                    <span
+                                        class="block max-sm:mx-auto max-sm:rotate-180 max-sm:[writing-mode:vertical-rl]"
+                                    >
+                                        Day
+                                    </span>
+                                </th>
                             </tr>
                         </thead>
 
@@ -513,7 +504,7 @@ function weekRange(week: Week): string {
                                 :key="date"
                             >
                                 <td
-                                    class="px-2 py-1 whitespace-nowrap text-muted-foreground max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card"
+                                    class="px-2 py-1 whitespace-nowrap text-muted-foreground max-sm:sticky max-sm:pl-0 max-sm:left-0 max-sm:z-10 max-sm:bg-card"
                                 >
                                     {{ formatDay(date) }}
                                 </td>
@@ -533,10 +524,6 @@ function weekRange(week: Week): string {
                                                           .status,
                                                   )
                                                 : 'bg-transparent hover:bg-muted'
-                                        "
-                                        :title="
-                                            markFor(goal.id, date)?.comment ??
-                                            undefined
                                         "
                                         :aria-label="`${goal.name} — ${formatDay(date)}${
                                             markFor(goal.id, date)
@@ -562,6 +549,46 @@ function weekRange(week: Week): string {
                                             "
                                         />
                                     </button>
+                                </td>
+
+                                <td class="p-0 pl-3 max-sm:pl-1">
+                                    <div
+                                        class="flex size-8 items-center justify-center rounded-md border"
+                                        role="img"
+                                        :class="
+                                            dayStatus(week, date) === null
+                                                ? 'border-dashed border-border/60'
+                                                : 'border-transparent ' +
+                                                  cellClassByStatus.get(
+                                                      dayStatus(week, date)!,
+                                                  )
+                                        "
+                                        :aria-label="`${formatDay(date)} — ${
+                                            dayStatus(week, date) === null
+                                                ? 'Open'
+                                                : dayStatus(week, date) ===
+                                                    'success'
+                                                  ? 'Day succeeded'
+                                                  : 'Day failed'
+                                        }`"
+                                    >
+                                        <Check
+                                            v-if="
+                                                dayStatus(week, date) ===
+                                                'success'
+                                            "
+                                            class="size-5 text-white"
+                                            stroke-width="3"
+                                        />
+
+                                        <X
+                                            v-else-if="
+                                                dayStatus(week, date) === 'fail'
+                                            "
+                                            class="size-5 text-white"
+                                            stroke-width="3"
+                                        />
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -646,42 +673,6 @@ function weekRange(week: Week): string {
                             <Button type="submit" class="cursor-pointer">
                                 <Spinner v-if="createForm.processing" />
                                 Create
-                            </Button>
-                        </DialogFooter>
-                    </fieldset>
-                </form>
-            </DialogContent>
-        </Dialog>
-
-        <!-- N/A comment dialog -->
-        <Dialog v-model:open="commentState.open">
-            <DialogContent>
-                <form @submit.prevent="saveComment">
-                    <fieldset :disabled="submitting" class="space-y-4">
-                        <DialogHeader>
-                            <DialogTitle>Why doesn't it apply?</DialogTitle>
-
-                            <DialogDescription>
-                                Add a short note explaining why this goal didn't
-                                apply that day.
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <Textarea
-                            v-model="commentState.text"
-                            rows="3"
-                            placeholder="e.g. Rest day, was travelling…"
-                            autofocus
-                        />
-
-                        <DialogFooter>
-                            <Button
-                                type="submit"
-                                class="cursor-pointer"
-                                :disabled="commentState.text.trim() === ''"
-                            >
-                                <Spinner v-if="submitting" />
-                                Save
                             </Button>
                         </DialogFooter>
                     </fieldset>

@@ -9,6 +9,5 @@ enum MarkStatus: string
 {
     case Success = 'success';
     case Partial = 'partial';
-    case NotApplicable = 'na';
     case Fail = 'fail';
 }

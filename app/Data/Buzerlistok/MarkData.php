@@ -13,7 +13,6 @@ class MarkData extends Data
     public function __construct(
         public string $marked_on,
         public MarkStatus $status,
-        public ?string $comment,
     ) {}
 
     public static function fromMark(Mark $mark): self
@@ -21,7 +20,6 @@ class MarkData extends Data
         return new self(
             marked_on: $mark->marked_on->toDateString(),
             status: $mark->status,
-            comment: $mark->comment,
         );
     }
 }

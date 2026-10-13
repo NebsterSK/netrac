@@ -16,8 +16,6 @@ class WeekSeeder extends Seeder
     {
         $goalNames = ['Exercise', 'Read 30 minutes', 'No sugar', 'Meditate', 'Sleep before 23:00'];
 
-        $comments = ['Rest day', 'Travelling', 'Sick', 'Family visit'];
-
         $today = Carbon::today();
 
         foreach (range(3, 0) as $weeksAgo) {
@@ -48,7 +46,6 @@ class WeekSeeder extends Seeder
                         MarkStatus::Success,
                         MarkStatus::Partial,
                         MarkStatus::Fail,
-                        MarkStatus::NotApplicable,
                         null,
                     ]);
 
@@ -59,7 +56,6 @@ class WeekSeeder extends Seeder
                     $goal->marks()->create([
                         'marked_on' => $day->toDateString(),
                         'status' => $status,
-                        'comment' => $status === MarkStatus::NotApplicable ? fake()->randomElement($comments) : null,
                     ]);
                 }
             }

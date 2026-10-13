@@ -21,7 +21,6 @@ class MarkFactory extends Factory
             'goal_id' => Goal::factory(),
             'marked_on' => now()->toDateString(),
             'status' => MarkStatus::Success,
-            'comment' => null,
         ];
     }
 }
