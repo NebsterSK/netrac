@@ -30,6 +30,19 @@ describe('access control', function () {
     });
 });
 
+it('lists every taken week start, including weeks beyond the displayed ones', function () {
+    foreach (range(0, 12) as $weeksAgo) {
+        Week::factory()->create(['starts_on' => now()->startOfWeek()->subWeeks($weeksAgo)->toDateString()]);
+    }
+
+    $this->actingAs(verifiedUser())
+        ->get(route('buzerlistok.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('weeks', 12)
+            ->has('takenWeekStarts', 13)
+            ->where('takenWeekStarts.0', now()->startOfWeek()->subWeeks(12)->toDateString()));
+});
+
 describe('creating a week', function () {
     it('creates a week with goals and snaps the date to Monday', function () {
         $this->actingAs(verifiedUser())
@@ -172,6 +185,16 @@ describe('editing a week', function () {
                 ->where('week.goals.0.name', 'Read'));
     });
 
+    it('lists the other taken week starts but not its own', function () {
+        Week::factory()->create(['starts_on' => '2026-06-29']);
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+
+        $this->actingAs(verifiedUser())
+            ->get(route('buzerlistok.edit', $week))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('takenWeekStarts', ['2026-06-29']));
+    });
+
     it('renames, reorders, adds and removes goals', function () {
         $week = Week::factory()->create(['starts_on' => '2026-07-06']);
         $read = Goal::factory()->create(['week_id' => $week->id, 'name' => 'Read', 'position' => 0]);
@@ -259,6 +282,50 @@ describe('editing a week', function () {
             ->assertSessionHasErrors('goals.0.id');
 
         expect($foreignGoal->fresh()->name)->not->toBe('Hijack');
+    });
+});
+
+describe('duplicating a week', function () {
+    it('redirects guests to login', function () {
+        $week = Week::factory()->create();
+
+        $this->post(route('buzerlistok.duplicate', $week))
+            ->assertRedirect(route('login'));
+
+        expect(Week::count())->toBe(1);
+    });
+
+    it('copies the goals into the following week without marks', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        $read = Goal::factory()->create(['week_id' => $week->id, 'name' => 'Read', 'position' => 0]);
+        Goal::factory()->create(['week_id' => $week->id, 'name' => 'Exercise', 'position' => 1]);
+        Mark::factory()->create(['goal_id' => $read->id, 'marked_on' => '2026-07-06']);
+
+        $this->actingAs(verifiedUser())
+            ->post(route('buzerlistok.duplicate', $week))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $duplicate = Week::whereDate('starts_on', '2026-07-13')->sole();
+
+        expect($duplicate->goals->pluck('name')->all())->toBe(['Read', 'Exercise'])
+            ->and($duplicate->goals->pluck('position')->all())->toBe([0, 1])
+            ->and(Mark::whereIn('goal_id', $duplicate->goals->pluck('id'))->count())->toBe(0)
+            ->and($week->fresh()->goals)->toHaveCount(2);
+    });
+
+    it('refuses to duplicate a week that is not the latest', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        Goal::factory()->create(['week_id' => $week->id]);
+        Week::factory()->create(['starts_on' => '2026-07-20']);
+
+        $this->actingAs(verifiedUser())
+            ->post(route('buzerlistok.duplicate', $week))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Only the latest buzerlistok can be duplicated.');
+
+        expect(Week::count())->toBe(2)
+            ->and(Goal::count())->toBe(1);
     });
 });
 

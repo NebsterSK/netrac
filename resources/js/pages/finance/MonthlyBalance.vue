@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { useMediaQuery } from '@vueuse/core';
 import type {
     Chart,
@@ -26,7 +26,6 @@ import { Badge } from '@/components/ui/badge';
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
@@ -40,7 +39,6 @@ import { useAppearance } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { index } from '@/routes/finance/monthly-balance';
-import { index as netWorthIndex } from '@/routes/finance/net-worth';
 import type { BreadcrumbItem } from '@/types';
 
 type Balance = App.Data.Finance.MonthlyBalanceData;
@@ -337,17 +335,6 @@ const breadcrumbs: BreadcrumbItem[] = [
             <Card class="self-start">
                 <CardHeader>
                     <CardTitle class="leading-8">Table</CardTitle>
-
-                    <CardDescription>
-                        Change of Account since the previous
-                        <Link
-                            :href="netWorthIndex()"
-                            class="underline underline-offset-4 hover:text-foreground"
-                        >
-                            net worth
-                        </Link>
-                        statement.
-                    </CardDescription>
                 </CardHeader>
 
                 <CardContent>

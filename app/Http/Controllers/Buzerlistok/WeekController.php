@@ -31,6 +31,7 @@ class WeekController extends Controller
             'weeks' => $weeks->map(
                 fn (Week $week): WeekData => WeekData::fromWeek($week),
             ),
+            'takenWeekStarts' => $this->takenWeekStarts(),
         ]);
     }
 
@@ -70,6 +71,7 @@ class WeekController extends Controller
 
         return Inertia::render('buzerlistok/Edit', [
             'week' => WeekData::fromWeek($week),
+            'takenWeekStarts' => $this->takenWeekStarts(except: $week),
         ]);
     }
 
@@ -131,6 +133,44 @@ class WeekController extends Controller
         return to_route('buzerlistok.index')->with('success', 'Buzerlistok updated.');
     }
 
+    /**
+     * Copy the latest week's goals into the following week, without any marks.
+     */
+    public function duplicate(Week $week): RedirectResponse
+    {
+        if (Week::whereDate('starts_on', '>', $week->starts_on)->exists()) {
+            return back()->with('error', 'Only the latest buzerlistok can be duplicated.');
+        }
+
+        $startsOn = $week->starts_on->copy()->addWeek();
+
+        try {
+            DB::transaction(function () use ($week, $startsOn): void {
+                $duplicate = Week::create([
+                    'starts_on' => $startsOn->toDateString(),
+                ]);
+
+                foreach ($week->goals as $goal) {
+                    $duplicate->goals()->create([
+                        'name' => $goal->name,
+                        'position' => $goal->position,
+                    ]);
+                }
+            });
+        } catch (Throwable $error) {
+            Log::error('Failed to duplicate buzerlistok week', [
+                'exception_message' => $error->getMessage(),
+                'exception_file' => $error->getFile(),
+                'exception_line' => $error->getLine(),
+                'week_id' => $week->id,
+            ]);
+
+            return back()->with('error', 'Failed to duplicate buzerlistok.');
+        }
+
+        return back()->with('success', 'Buzerlistok duplicated.');
+    }
+
     public function destroy(Week $week): RedirectResponse
     {
         try {
@@ -147,5 +187,20 @@ class WeekController extends Controller
         }
 
         return back()->with('success', 'Buzerlistok deleted.');
+    }
+
+    /**
+     * Mondays that already have a week, so the picker can grey them out.
+     *
+     * @return array<int, string>
+     */
+    private function takenWeekStarts(?Week $except = null): array
+    {
+        return Week::query()
+            ->when($except, fn ($query) => $query->whereKeyNot($except->id))
+            ->orderBy('starts_on')
+            ->get(['starts_on'])
+            ->map(fn (Week $week): string => $week->starts_on->toDateString())
+            ->all();
     }
 }

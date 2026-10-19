@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { useIntervalFn } from '@vueuse/core';
 import {
     Check,
+    Copy,
     Eraser,
     Minus,
     Pencil,
@@ -10,7 +11,7 @@ import {
     Trash2,
     X,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import WeekStartPicker from '@/components/WeekStartPicker.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import buzerlistok from '@/routes/buzerlistok';
@@ -41,6 +43,7 @@ type Brush = MarkStatus | 'erase';
 
 const props = defineProps<{
     weeks: Week[];
+    takenWeekStarts: string[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -231,7 +234,16 @@ function paintCell(goalId: number, date: string) {
 
 // --- Create week dialog ---------------------------------------------------
 
-function currentMonday(): string {
+function toDateString(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+/** This week's Monday, or the first later Monday that has no week yet. */
+function firstFreeMonday(): string {
     const now = new Date();
     const day = now.getDay(); // 0 = Sunday
     const diff = day === 0 ? -6 : 1 - day;
@@ -241,11 +253,11 @@ function currentMonday(): string {
         now.getDate() + diff,
     );
 
-    const year = monday.getFullYear();
-    const month = String(monday.getMonth() + 1).padStart(2, '0');
-    const date = String(monday.getDate()).padStart(2, '0');
+    while (props.takenWeekStarts.includes(toDateString(monday))) {
+        monday.setDate(monday.getDate() + 7);
+    }
 
-    return `${year}-${month}-${date}`;
+    return toDateString(monday);
 }
 
 const createOpen = ref(false);
@@ -259,19 +271,47 @@ function makeGoalField(): GoalField {
 }
 
 const createForm = useForm<{ starts_on: string; goals: GoalField[] }>({
-    starts_on: currentMonday(),
+    starts_on: firstFreeMonday(),
     goals: [makeGoalField()],
 });
 
+const createStartsOnTaken = computed(() =>
+    props.takenWeekStarts.includes(createForm.starts_on),
+);
+
 function openCreateDialog() {
     createForm.clearErrors();
-    createForm.starts_on = currentMonday();
+    createForm.starts_on = firstFreeMonday();
     createForm.goals = [makeGoalField()];
     createOpen.value = true;
 }
 
-function addGoalField() {
-    createForm.goals = [...createForm.goals, makeGoalField()];
+const goalFields = ref<HTMLElement | null>(null);
+
+/**
+ * Insert an empty goal (at the end by default) and focus it so it can be typed
+ * into straight away.
+ */
+async function addGoalField(position = createForm.goals.length) {
+    const goals = [...createForm.goals];
+    goals.splice(position, 0, makeGoalField());
+    createForm.goals = goals;
+
+    await nextTick();
+
+    goalFields.value
+        ?.querySelectorAll<HTMLInputElement>('[data-goal-input]')
+        [position]?.focus();
+}
+
+/** Enter adds a goal below the current one instead of submitting the form. */
+function onGoalEnter(event: KeyboardEvent, index: number) {
+    if (event.isComposing) {
+        return;
+    }
+
+    event.preventDefault();
+    addGoalField(index + 1);
 }
 
 function removeGoalField(index: number) {
@@ -299,6 +339,27 @@ function submitCreate() {
                 createForm.reset();
             },
         });
+}
+
+// Weeks arrive newest first; only the newest can be carried forward.
+const latestWeekId = computed(() => props.weeks[0]?.id ?? null);
+
+const duplicatingWeekId = ref<number | null>(null);
+
+function duplicateWeek(week: Week) {
+    router.post(
+        buzerlistok.duplicate.url(week.id),
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => {
+                duplicatingWeekId.value = week.id;
+            },
+            onFinish: () => {
+                duplicatingWeekId.value = null;
+            },
+        },
+    );
 }
 
 function deleteWeek(week: Week) {
@@ -440,6 +501,25 @@ function weekRange(week: Week): string {
                             >
                                 <Pencil class="size-4" />
                             </Link>
+                        </Button>
+
+                        <Button
+                            v-if="week.id === latestWeekId"
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            class="cursor-pointer"
+                            aria-label="Duplicate week into the following week"
+                            title="Duplicate into next week"
+                            :disabled="duplicatingWeekId !== null"
+                            @click="duplicateWeek(week)"
+                        >
+                            <Spinner
+                                v-if="duplicatingWeekId === week.id"
+                                class="size-4"
+                            />
+
+                            <Copy v-else class="size-4" />
                         </Button>
 
                         <Button
@@ -610,26 +690,30 @@ function weekRange(week: Week): string {
 
                             <DialogDescription>
                                 Pick the week and list the goals you want to
-                                track. The date snaps to the Monday of that
-                                week.
+                                track.
                             </DialogDescription>
                         </DialogHeader>
 
                         <div class="space-y-2">
                             <Label for="starts_on">Week start</Label>
 
-                            <Input
+                            <WeekStartPicker
                                 id="starts_on"
                                 v-model="createForm.starts_on"
-                                type="date"
+                                :taken-week-starts="takenWeekStarts"
                             />
 
                             <InputError
-                                :message="createForm.errors.starts_on"
+                                :message="
+                                    createForm.errors.starts_on ??
+                                    (createStartsOnTaken
+                                        ? 'A buzerlistok already exists for that week.'
+                                        : undefined)
+                                "
                             />
                         </div>
 
-                        <div class="space-y-2">
+                        <div ref="goalFields" class="space-y-2">
                             <Label>Goals</Label>
 
                             <div
@@ -640,6 +724,8 @@ function weekRange(week: Week): string {
                                 <Input
                                     v-model="goal.name"
                                     placeholder="e.g. Exercise, Read, No sugar"
+                                    data-goal-input
+                                    @keydown.enter="onGoalEnter($event, index)"
                                 />
 
                                 <Button
@@ -670,7 +756,11 @@ function weekRange(week: Week): string {
                         </div>
 
                         <DialogFooter>
-                            <Button type="submit" class="cursor-pointer">
+                            <Button
+                                type="submit"
+                                class="cursor-pointer"
+                                :disabled="createStartsOnTaken"
+                            >
                                 <Spinner v-if="createForm.processing" />
                                 Create
                             </Button>

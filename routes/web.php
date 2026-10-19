@@ -25,6 +25,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [WeekController::class, 'store'])->name('store');
         Route::get('/{week}/edit', [WeekController::class, 'edit'])->name('edit');
         Route::put('/{week}', [WeekController::class, 'update'])->name('update');
+        Route::post('/{week}/duplicate', [WeekController::class, 'duplicate'])->name('duplicate');
         Route::delete('/{week}', [WeekController::class, 'destroy'])->name('destroy');
         Route::put('/goals/{goal}/marks', [MarkController::class, 'update'])->name('goals.marks.update');
     });

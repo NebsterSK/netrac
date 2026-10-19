@@ -7,13 +7,14 @@ import {
     Plus,
     X,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import WeekStartPicker from '@/components/WeekStartPicker.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import buzerlistok from '@/routes/buzerlistok';
@@ -23,6 +24,7 @@ type Week = App.Data.Buzerlistok.WeekData;
 
 const props = defineProps<{
     week: Week;
+    takenWeekStarts: string[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -54,6 +56,10 @@ const form = useForm<{ starts_on: string; goals: GoalField[] }>({
     goals: props.week.goals.map((goal) => makeGoalField(goal.id, goal.name)),
 });
 
+const startsOnTaken = computed(() =>
+    props.takenWeekStarts.includes(form.starts_on),
+);
+
 const removedGoalsWithMarks = computed(() => {
     const keptIds = new Set(form.goals.map((goal) => goal.id));
 
@@ -62,8 +68,32 @@ const removedGoalsWithMarks = computed(() => {
     );
 });
 
-function addGoalField() {
-    form.goals = [...form.goals, makeGoalField()];
+const goalFields = ref<HTMLElement | null>(null);
+
+/**
+ * Insert an empty goal (at the end by default) and focus it so it can be typed
+ * into straight away.
+ */
+async function addGoalField(position = form.goals.length) {
+    const goals = [...form.goals];
+    goals.splice(position, 0, makeGoalField());
+    form.goals = goals;
+
+    await nextTick();
+
+    goalFields.value
+        ?.querySelectorAll<HTMLInputElement>('[data-goal-input]')
+        [position]?.focus();
+}
+
+/** Enter adds a goal below the current one instead of submitting the form. */
+function onGoalEnter(event: KeyboardEvent, index: number) {
+    if (event.isComposing) {
+        return;
+    }
+
+    event.preventDefault();
+    addGoalField(index + 1);
 }
 
 function removeGoalField(index: number) {
@@ -146,21 +176,27 @@ function submitForm() {
                         <div class="space-y-2">
                             <Label for="starts_on">Week start</Label>
 
-                            <Input
+                            <WeekStartPicker
                                 id="starts_on"
                                 v-model="form.starts_on"
-                                type="date"
+                                :taken-week-starts="takenWeekStarts"
                             />
 
                             <p class="text-xs text-muted-foreground">
-                                Snaps to the Monday of that week. Existing marks
-                                move along with it.
+                                Existing marks move along with the week.
                             </p>
 
-                            <InputError :message="form.errors.starts_on" />
+                            <InputError
+                                :message="
+                                    form.errors.starts_on ??
+                                    (startsOnTaken
+                                        ? 'A buzerlistok already exists for that week.'
+                                        : undefined)
+                                "
+                            />
                         </div>
 
-                        <div class="space-y-2">
+                        <div ref="goalFields" class="space-y-2">
                             <Label>Goals</Label>
 
                             <ul class="space-y-2">
@@ -189,6 +225,8 @@ function submitForm() {
                                     <Input
                                         v-model="goal.name"
                                         placeholder="e.g. Exercise, Read, No sugar"
+                                        data-goal-input
+                                        @keydown.enter="onGoalEnter($event, index)"
                                     />
 
                                     <div class="flex sm:hidden">
@@ -250,7 +288,11 @@ function submitForm() {
                 </Card>
 
                 <div class="flex justify-end">
-                    <Button type="submit" class="cursor-pointer">
+                    <Button
+                        type="submit"
+                        class="cursor-pointer"
+                        :disabled="startsOnTaken"
+                    >
                         <Spinner v-if="form.processing" />
                         Save changes
                     </Button>
