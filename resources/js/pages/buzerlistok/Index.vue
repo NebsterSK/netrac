@@ -187,6 +187,44 @@ function dayStatus(week: Week, date: string): DayStatus | null {
     return date < today.value ? 'fail' : null;
 }
 
+/**
+ * Share of goal-days that succeeded (success or partial), rounded to a whole
+ * percent. Past days count every goal, so an unmarked one counts as missed;
+ * today counts only what is already marked; future days are left out. Null
+ * when nothing counts yet.
+ */
+function weekSuccessRate(week: Week): number | null {
+    let counted = 0;
+    let succeeded = 0;
+
+    for (const date of week.days) {
+        if (date > today.value) {
+            continue;
+        }
+
+        for (const goal of week.goals) {
+            const status = markFor(goal.id, date)?.status;
+
+            if (date === today.value && status === undefined) {
+                continue;
+            }
+
+            counted++;
+
+            if (status === 'success' || status === 'partial') {
+                succeeded++;
+            }
+        }
+    }
+
+    return counted === 0 ? null : Math.round((succeeded / counted) * 100);
+}
+
+/** Red at 0 %, through yellow, to green at 100 %. */
+function successRateColor(rate: number): string {
+    return `hsl(${Math.round(rate * 1.2)} 75% 50%)`;
+}
+
 // Dates run newest-first down each table.
 function daysDescending(week: Week): string[] {
     return [...week.days].reverse();
@@ -484,8 +522,21 @@ function weekRange(week: Week): string {
                 class="max-w-full self-start max-sm:self-stretch"
             >
                 <CardHeader class="flex items-center justify-between gap-2">
-                    <CardTitle class="leading-8">
+                    <CardTitle
+                        class="flex flex-wrap items-baseline gap-x-3 leading-8"
+                    >
                         {{ weekRange(week) }}
+
+                        <span
+                            v-if="weekSuccessRate(week) !== null"
+                            class="font-mono text-base font-semibold"
+                            :style="{
+                                color: successRateColor(weekSuccessRate(week)!),
+                            }"
+                            :title="`${weekSuccessRate(week)}% of goals succeeded`"
+                        >
+                            {{ weekSuccessRate(week) }}%
+                        </span>
                     </CardTitle>
 
                     <div class="flex items-center gap-1">
