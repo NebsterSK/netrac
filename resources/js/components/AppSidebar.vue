@@ -5,11 +5,11 @@ import {
     ClipboardList,
     Dumbbell,
     FolderTree,
+    Landmark,
     LayoutGrid,
     Receipt,
     Tags,
     TrendingUp,
-    Vault,
     Wallet,
 } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
@@ -27,11 +27,11 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import buzerlistok from '@/routes/buzerlistok';
+import assets from '@/routes/finance/assets';
 import expenseCategories from '@/routes/finance/expense-categories';
 import expenses from '@/routes/finance/expenses';
 import monthlyBalance from '@/routes/finance/monthly-balance';
 import netWorth from '@/routes/finance/net-worth';
-import vaults from '@/routes/finance/vaults';
 import exerciseCategories from '@/routes/health/exercise-categories';
 import exercises from '@/routes/health/exercises';
 import sessions from '@/routes/health/sessions';
@@ -67,9 +67,9 @@ const mainNavGroups: NavGroup[] = [
                 icon: TrendingUp,
             },
             {
-                title: 'Vaults',
-                href: vaults.index(),
-                icon: Vault,
+                title: 'Assets',
+                href: assets.index(),
+                icon: Landmark,
             },
             {
                 title: 'Expenses',

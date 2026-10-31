@@ -17,8 +17,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property bool $is_draft
- * @property-read Collection<int, Vault> $vaults
- * @property-read int|null $vaults_count
+ * @property-read Collection<int, Asset> $assets
+ * @property-read int|null $assets_count
  *
  * @method static \Database\Factories\Finance\StatementFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement newModelQuery()
@@ -47,30 +47,30 @@ class Statement extends Model
     }
 
     /**
-     * @return BelongsToMany<Vault, $this>
+     * @return BelongsToMany<Asset, $this, AssetStatement>
      */
-    public function vaults(): BelongsToMany
+    public function assets(): BelongsToMany
     {
-        return $this->belongsToMany(Vault::class)->withPivot('amount');
+        return $this->belongsToMany(Asset::class)->using(AssetStatement::class)->withPivot('amount')->withTimestamps();
     }
 
     /**
-     * Amount held in each vault, keyed by vault id.
+     * Amount held in each asset, keyed by asset id.
      *
      * @return array<int, int>
      */
     public function amounts(): array
     {
-        return $this->vaults
-            ->mapWithKeys(fn (Vault $vault): array => [$vault->id => (int) $vault->pivot->amount])
+        return $this->assets
+            ->mapWithKeys(fn (Asset $asset): array => [$asset->id => (int) $asset->pivot->amount])
             ->all();
     }
 
     /**
-     * Amount held in the given vault; a vault without a recorded amount holds nothing.
+     * Amount held in the given asset; an asset without a recorded amount holds nothing.
      */
-    public function amountIn(Vault $vault): int
+    public function amountIn(Asset $asset): int
     {
-        return $this->amounts()[$vault->id] ?? 0;
+        return (int) $this->assets->firstWhere('id', $asset->id)?->pivot->amount;
     }
 }

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Finance\Vault;
+namespace App\Http\Requests\Finance\Asset;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreVaultRequest extends FormRequest
+class StoreAssetRequest extends FormRequest
 {
     /**
      * @return array<string, array<mixed>>
@@ -12,7 +12,7 @@ class StoreVaultRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', 'unique:vaults,name'],
+            'name' => ['required', 'string', 'max:255', 'unique:assets,name'],
             'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'tracks_monthly_balance' => ['required', 'boolean'],
         ];

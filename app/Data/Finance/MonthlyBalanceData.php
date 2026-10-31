@@ -2,14 +2,14 @@
 
 namespace App\Data\Finance;
 
+use App\Models\Finance\Asset;
 use App\Models\Finance\Statement;
-use App\Models\Finance\Vault;
 use Illuminate\Support\Collection;
 use Spatie\LaravelData\Data;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
- * A month's balance, derived from how much the vault that tracks the monthly
+ * A month's balance, derived from how much the asset that tracks the monthly
  * balance (the Account) changed since the previous statement. Never stored.
  */
 #[TypeScript]
@@ -23,16 +23,35 @@ class MonthlyBalanceData extends Data
     ) {}
 
     /**
-     * Diff each statement's amount in the vault against the statement before
-     * it. The earliest statement has nothing to diff against, so it yields no
-     * balance. Without a vault there is nothing to track.
+     * Build the balances from every statement, loading only the tracked
+     * asset's amounts instead of every pivot row.
      *
-     * @param  Collection<int, Statement>  $statements  with their vaults loaded
      * @return Collection<int, self> oldest first
      */
-    public static function fromStatements(Collection $statements, ?Vault $vault): Collection
+    public static function fromAllStatements(): Collection
     {
-        if ($vault === null) {
+        $asset = Asset::monthlyBalanceAsset();
+
+        if ($asset === null) {
+            return collect();
+        }
+
+        $statements = Statement::with(['assets' => fn ($query) => $query->whereKey($asset->id)])->get();
+
+        return self::fromStatements($statements, $asset);
+    }
+
+    /**
+     * Diff each statement's amount in the asset against the statement before
+     * it. The earliest statement has nothing to diff against, so it yields no
+     * balance. Without an asset there is nothing to track.
+     *
+     * @param  Collection<int, Statement>  $statements  with their assets loaded
+     * @return Collection<int, self> oldest first
+     */
+    public static function fromStatements(Collection $statements, ?Asset $asset): Collection
+    {
+        if ($asset === null) {
             return collect();
         }
 
@@ -42,7 +61,7 @@ class MonthlyBalanceData extends Data
             ->skip(1)
             ->map(fn (Statement $statement, int $index): self => new self(
                 date: $statement->date->toDateString(),
-                amount: $statement->amountIn($vault) - $sorted[$index - 1]->amountIn($vault),
+                amount: $statement->amountIn($asset) - $sorted[$index - 1]->amountIn($asset),
                 note: $statement->note,
                 is_draft: $statement->is_draft,
             ))

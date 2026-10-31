@@ -6,8 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreStatementRequest extends FormRequest
 {
+    use ValidatesAssetAmounts;
     use ValidatesDraftPosition;
-    use ValidatesVaultAmounts;
 
     /**
      * @return array<string, array<mixed>>

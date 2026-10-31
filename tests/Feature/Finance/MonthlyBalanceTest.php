@@ -1,7 +1,7 @@
 <?php
 
+use App\Models\Finance\Asset;
 use App\Models\Finance\Statement;
-use App\Models\Finance\Vault;
 use Inertia\Testing\AssertableInertia as Assert;
 
 describe('access control', function () {
@@ -19,7 +19,7 @@ describe('access control', function () {
 });
 
 it('derives each balance from the account change since the previous statement, newest first', function () {
-    $account = Vault::monthlyBalanceVault();
+    $account = Asset::monthlyBalanceAsset();
 
     Statement::factory()->withAmount($account, 1000)->create(['date' => '2024-01-01']);
     Statement::factory()->withAmount($account, 1500)->create(['date' => '2024-02-01', 'note' => 'Bonus']);
@@ -37,9 +37,9 @@ it('derives each balance from the account change since the previous statement, n
             ->where('balances.1.note', 'Bonus'));
 });
 
-it('follows whichever vault tracks the monthly balance', function () {
-    Vault::query()->update(['tracks_monthly_balance' => false]);
-    $savings = Vault::factory()->create(['tracks_monthly_balance' => true]);
+it('follows whichever asset tracks the monthly balance', function () {
+    Asset::query()->update(['tracks_monthly_balance' => false]);
+    $savings = Asset::factory()->tracksMonthlyBalance()->create();
 
     Statement::factory()->withAmount($savings, 300)->create(['date' => '2024-01-01']);
     Statement::factory()->withAmount($savings, 350)->create(['date' => '2024-02-01']);
@@ -51,8 +51,8 @@ it('follows whichever vault tracks the monthly balance', function () {
             ->where('balances.0.amount', 50));
 });
 
-it('yields no balances when no vault tracks the monthly balance', function () {
-    Vault::query()->update(['tracks_monthly_balance' => false]);
+it('yields no balances when no asset tracks the monthly balance', function () {
+    Asset::query()->update(['tracks_monthly_balance' => false]);
 
     Statement::factory()->create(['date' => '2024-01-01']);
     Statement::factory()->create(['date' => '2024-02-01']);
@@ -71,7 +71,7 @@ it('yields no balance from a single statement', function () {
 });
 
 it('marks the balance of a draft statement as a draft', function () {
-    $account = Vault::monthlyBalanceVault();
+    $account = Asset::monthlyBalanceAsset();
 
     Statement::factory()->withAmount($account, 1000)->create(['date' => '2024-01-01']);
     Statement::factory()->draft()->withAmount($account, 1400)->create(['date' => '2024-02-01']);

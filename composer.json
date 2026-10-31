@@ -62,7 +62,7 @@
             "@php artisan ide-helper:models -WR --no-interaction"
         ],
         "larastan": [
-            "vendor/bin/phpstan analyse"
+            "vendor/bin/phpstan analyse --memory-limit=1G"
         ],
         "pint": [
             "vendor/bin/pint"

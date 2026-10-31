@@ -2,13 +2,13 @@
 
 namespace Database\Factories\Finance;
 
-use App\Models\Finance\Vault;
+use App\Models\Finance\Asset;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Vault>
+ * @extends Factory<Asset>
  */
-class VaultFactory extends Factory
+class AssetFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -20,8 +20,17 @@ class VaultFactory extends Factory
         return [
             'name' => fake()->unique()->words(asText: true),
             'color' => fake()->hexColor(),
-            'position' => fake()->numberBetween(100, 1000),
             'tracks_monthly_balance' => false,
         ];
+    }
+
+    /**
+     * Make the asset the one that drives the monthly balance.
+     */
+    public function tracksMonthlyBalance(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'tracks_monthly_balance' => true,
+        ]);
     }
 }

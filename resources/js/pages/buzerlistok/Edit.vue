@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import {
-    ChevronDown,
-    ChevronUp,
-    GripVertical,
-    Plus,
-    X,
-} from 'lucide-vue-next';
+import { ChevronDown, ChevronUp, GripVertical, Plus, X } from 'lucide-vue-next';
 import { computed, nextTick, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -226,7 +220,9 @@ function submitForm() {
                                         v-model="goal.name"
                                         placeholder="e.g. Exercise, Read, No sugar"
                                         data-goal-input
-                                        @keydown.enter="onGoalEnter($event, index)"
+                                        @keydown.enter="
+                                            onGoalEnter($event, index)
+                                        "
                                     />
 
                                     <div class="flex sm:hidden">

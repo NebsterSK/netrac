@@ -2,8 +2,8 @@
 
 namespace Database\Factories\Finance;
 
+use App\Models\Finance\Asset;
 use App\Models\Finance\Statement;
-use App\Models\Finance\Vault;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -30,12 +30,12 @@ class StatementFactory extends Factory
     }
 
     /**
-     * Record the given amount in the vault once the statement is created.
+     * Record the given amount in the asset once the statement is created.
      */
-    public function withAmount(Vault $vault, int $amount): static
+    public function withAmount(Asset $asset, int $amount): static
     {
-        return $this->afterCreating(function (Statement $statement) use ($vault, $amount): void {
-            $statement->vaults()->attach($vault->id, ['amount' => $amount]);
+        return $this->afterCreating(function (Statement $statement) use ($asset, $amount): void {
+            $statement->assets()->attach($asset->id, ['amount' => $amount]);
         });
     }
 }

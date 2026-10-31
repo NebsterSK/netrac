@@ -7,8 +7,8 @@ use Illuminate\Validation\Rule;
 
 class UpdateStatementRequest extends FormRequest
 {
+    use ValidatesAssetAmounts;
     use ValidatesDraftPosition;
-    use ValidatesVaultAmounts;
 
     /**
      * @return array<string, array<mixed>>

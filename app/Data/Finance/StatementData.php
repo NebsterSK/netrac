@@ -12,7 +12,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 class StatementData extends Data
 {
     /**
-     * @param  array<int, int>  $amounts  amount held in each vault, keyed by vault id
+     * @param  array<int, int>  $amounts  amount held in each asset, keyed by asset id
      */
     public function __construct(
         public int $id,

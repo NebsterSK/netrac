@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Requests\Finance\Vault;
+namespace App\Http\Requests\Finance\Asset;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateVaultRequest extends FormRequest
+class UpdateAssetRequest extends FormRequest
 {
     /**
      * @return array<string, array<mixed>>
@@ -13,7 +13,7 @@ class UpdateVaultRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', Rule::unique('vaults', 'name')->ignore($this->route('vault'))],
+            'name' => ['required', 'string', 'max:255', Rule::unique('assets', 'name')->ignore($this->route('asset'))],
             'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'tracks_monthly_balance' => ['required', 'boolean'],
         ];

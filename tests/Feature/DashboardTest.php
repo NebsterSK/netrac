@@ -1,9 +1,9 @@
 <?php
 
+use App\Models\Finance\Asset;
 use App\Models\Finance\Expense;
 use App\Models\Finance\ExpenseCategory;
 use App\Models\Finance\Statement;
-use App\Models\Finance\Vault;
 use Inertia\Testing\AssertableInertia as Assert;
 
 describe('access control', function () {
@@ -33,7 +33,7 @@ it('reports null period averages with no balances', function () {
 });
 
 it('averages derived balances per calendar month', function () {
-    $account = Vault::monthlyBalanceVault();
+    $account = Asset::monthlyBalanceAsset();
 
     Statement::factory()->withAmount($account, 1000)->create(['date' => '2023-02-01']);
     Statement::factory()->withAmount($account, 1100)->create(['date' => '2023-03-01']);
@@ -53,7 +53,7 @@ it('averages derived balances per calendar month', function () {
 });
 
 it('computes the period averages from derived balances', function () {
-    $account = Vault::monthlyBalanceVault();
+    $account = Asset::monthlyBalanceAsset();
 
     Statement::factory()->withAmount($account, 1000)->create(['date' => '2024-01-01']);
     Statement::factory()->withAmount($account, 1100)->create(['date' => '2024-02-01']);
@@ -68,7 +68,7 @@ it('computes the period averages from derived balances', function () {
 });
 
 it('leaves a draft balance out of the averages', function () {
-    $account = Vault::monthlyBalanceVault();
+    $account = Asset::monthlyBalanceAsset();
 
     Statement::factory()->withAmount($account, 1000)->create(['date' => '2024-01-01']);
     Statement::factory()->withAmount($account, 1100)->create(['date' => '2024-02-01']);

@@ -122,7 +122,9 @@ const label = computed(() => {
                 initial-focus
                 @update:model-value="select"
             >
-                <CalendarHeader class="relative flex items-center justify-between pb-3">
+                <CalendarHeader
+                    class="relative flex items-center justify-between pb-3"
+                >
                     <CalendarPrev
                         :class="
                             cn(

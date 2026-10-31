@@ -1,24 +1,24 @@
 <?php
 
+use App\Models\Finance\Asset;
 use App\Models\Finance\Statement;
-use App\Models\Finance\Vault;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
- * A valid statement with 1000 in every vault.
+ * A valid statement with 1000 in every asset.
  */
 function statementPayload(array $overrides = []): array
 {
     return array_merge([
         'date' => '2024-05-01',
-        'amounts' => Vault::pluck('id')->mapWithKeys(fn (int $vaultId): array => [$vaultId => 1000])->all(),
+        'amounts' => Asset::pluck('id')->mapWithKeys(fn (int $assetId): array => [$assetId => 1000])->all(),
         'is_draft' => false,
     ], $overrides);
 }
 
-function accountVault(): Vault
+function accountAsset(): Asset
 {
-    return Vault::where('name', 'Account')->sole();
+    return Asset::where('name', 'Account')->sole();
 }
 
 describe('access control', function () {
@@ -35,18 +35,19 @@ describe('access control', function () {
     });
 });
 
-it('lists vaults in their saved order', function () {
+it('lists assets alphabetically', function () {
     $this->actingAs(verifiedUser())
         ->get(route('finance.net-worth.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('vaults', 6)
-            ->where('vaults.0.name', 'Account')
-            ->where('vaults.0.color', '#9ca3af')
-            ->where('vaults.5.name', 'Trading 212'));
+            ->has('assets', 6)
+            ->where('assets.0.name', 'Account')
+            ->where('assets.0.color', '#9ca3af')
+            ->where('assets.1.name', 'Finax')
+            ->where('assets.5.name', 'Uniqa SDS'));
 });
 
-it('lists statements newest first with their vault amounts', function () {
-    $account = accountVault();
+it('lists statements newest first with their asset amounts', function () {
+    $account = accountAsset();
 
     Statement::factory()->create(['date' => '2024-01-01']);
     Statement::factory()->withAmount($account, 12345)->create(['date' => '2024-03-01']);
@@ -59,8 +60,8 @@ it('lists statements newest first with their vault amounts', function () {
             ->where("statements.0.amounts.{$account->id}", 12345));
 });
 
-it('stores a statement with an amount for every vault', function () {
-    $account = accountVault();
+it('stores a statement with an amount for every asset', function () {
+    $account = accountAsset();
 
     $this->actingAs(verifiedUser())
         ->post(route('finance.net-worth.store'), statementPayload())
@@ -69,21 +70,21 @@ it('stores a statement with an amount for every vault', function () {
 
     $statement = Statement::sole();
 
-    expect($statement->vaults)->toHaveCount(Vault::count())
+    expect($statement->assets)->toHaveCount(Asset::count())
         ->and($statement->amountIn($account))->toBe(1000);
 });
 
-it('requires an amount for every vault on store', function () {
-    $vaultErrors = Vault::pluck('id')->map(fn (int $vaultId): string => "amounts.{$vaultId}")->all();
+it('requires an amount for every asset on store', function () {
+    $assetErrors = Asset::pluck('id')->map(fn (int $assetId): string => "amounts.{$assetId}")->all();
 
     $this->actingAs(verifiedUser())
         ->from(route('finance.net-worth.index'))
         ->post(route('finance.net-worth.store'), ['amounts' => ['placeholder' => 1]])
-        ->assertSessionHasErrors(['date', 'amounts', ...$vaultErrors]);
+        ->assertSessionHasErrors(['date', 'amounts', ...$assetErrors]);
 });
 
-it('names the vault in amount errors', function () {
-    $account = accountVault();
+it('names the asset in amount errors', function () {
+    $account = accountAsset();
     $payload = statementPayload();
     unset($payload['amounts'][$account->id]);
 
@@ -93,7 +94,7 @@ it('names the vault in amount errors', function () {
         ->assertSessionHasErrors(["amounts.{$account->id}" => 'The Account field is required.']);
 });
 
-it('rejects an amount for an unknown vault', function () {
+it('rejects an amount for an unknown asset', function () {
     $payload = statementPayload();
     $payload['amounts'][999999] = 1000;
 
@@ -106,7 +107,7 @@ it('rejects an amount for an unknown vault', function () {
 });
 
 it('rejects negative amounts', function () {
-    $account = accountVault();
+    $account = accountAsset();
     $payload = statementPayload();
     $payload['amounts'][$account->id] = -1;
 
@@ -133,7 +134,7 @@ it('blocks guests from storing', function () {
 });
 
 it('updates a statement', function () {
-    $account = accountVault();
+    $account = accountAsset();
     $statement = Statement::factory()->withAmount($account, 100)->create(['date' => '2024-07-01']);
 
     $payload = statementPayload(['date' => '2024-08-01']);
@@ -147,7 +148,7 @@ it('updates a statement', function () {
     $statement->refresh();
 
     expect($statement->amountIn($account))->toBe(777)
-        ->and($statement->vaults)->toHaveCount(Vault::count())
+        ->and($statement->assets)->toHaveCount(Asset::count())
         ->and($statement->date->toDateString())->toBe('2024-08-01');
 });
 
@@ -169,7 +170,7 @@ it('rejects a note longer than 255 characters', function () {
 });
 
 it('deletes a statement with its amounts', function () {
-    $statement = Statement::factory()->withAmount(accountVault(), 500)->create();
+    $statement = Statement::factory()->withAmount(accountAsset(), 500)->create();
 
     $this->actingAs(verifiedUser())
         ->delete(route('finance.net-worth.destroy', $statement))
@@ -177,7 +178,7 @@ it('deletes a statement with its amounts', function () {
         ->assertSessionHas('success');
 
     $this->assertModelMissing($statement);
-    $this->assertDatabaseMissing('statement_vault', ['statement_id' => $statement->id]);
+    $this->assertDatabaseMissing('asset_statement', ['statement_id' => $statement->id]);
 });
 
 describe('drafts', function () {
@@ -238,7 +239,7 @@ describe('drafts', function () {
     });
 
     it('finalizes a draft', function () {
-        $account = accountVault();
+        $account = accountAsset();
         $draft = Statement::factory()->draft()->create(['date' => '2024-05-01']);
 
         $payload = statementPayload();

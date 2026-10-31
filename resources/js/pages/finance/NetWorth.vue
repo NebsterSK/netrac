@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { useMediaQuery } from '@vueuse/core';
+import { useLocalStorage, useMediaQuery } from '@vueuse/core';
 import type { ScriptableLineSegmentContext, TooltipItem } from 'chart.js';
 import {
     CategoryScale,
@@ -14,10 +14,12 @@ import {
     Tooltip as ChartTooltip,
 } from 'chart.js';
 import {
+    ArrowDown,
     ArrowUp,
     CircleCheck,
     ChevronLeft,
     ChevronRight,
+    Columns3,
     EllipsisVertical,
     MessageSquare,
     Pencil,
@@ -52,6 +54,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -67,16 +74,16 @@ import { destroy, index, store, update } from '@/routes/finance/net-worth';
 import type { BreadcrumbItem } from '@/types';
 
 type Statement = App.Data.Finance.StatementData;
-type Vault = App.Data.Finance.VaultData;
+type Asset = App.Data.Finance.AssetData;
 
 const props = defineProps<{
-    vaults: Vault[];
+    assets: Asset[];
     statements: Statement[];
     existingDates: string[];
 }>();
 
-/** Color for a vault saved without one. */
-const FALLBACK_VAULT_COLOR = '#9ca3af';
+/** Color for an asset saved without one. */
+const FALLBACK_ASSET_COLOR = '#9ca3af';
 
 function hexToRgb(hex: string): string {
     const red = parseInt(hex.slice(1, 3), 16);
@@ -86,18 +93,99 @@ function hexToRgb(hex: string): string {
     return `rgb(${red}, ${green}, ${blue})`;
 }
 
-/** One table column / chart series per vault, in the vaults' order. */
+/** Left-to-right order of the asset columns (asset ids), saved per browser. */
+const assetOrder = useLocalStorage<number[]>('net-worth.asset-order', []);
+
+/** Assets in the saved order; assets missing from it (e.g. new ones) follow alphabetically. */
+const orderedAssets = computed(() => {
+    const rank = new Map(
+        assetOrder.value.map((assetId, idx) => [assetId, idx]),
+    );
+    const unranked = Number.MAX_SAFE_INTEGER;
+
+    return [...props.assets].sort(
+        (left, right) =>
+            (rank.get(left.id) ?? unranked) - (rank.get(right.id) ?? unranked),
+    );
+});
+
+/** One table column / chart series per asset, in the saved column order. */
 const columns = computed(() =>
-    props.vaults.map((vault) => ({
-        id: vault.id,
-        label: vault.name,
-        color: hexToRgb(vault.color ?? FALLBACK_VAULT_COLOR),
+    orderedAssets.value.map((asset) => ({
+        id: asset.id,
+        label: asset.name,
+        color: hexToRgb(asset.color ?? FALLBACK_ASSET_COLOR),
     })),
 );
 
-/** A vault without a recorded amount in the statement holds nothing. */
-function amountOf(statement: Statement, vaultId: number): number {
-    return statement.amounts[vaultId] ?? 0;
+/** Move an asset column to the given index and save the new order. */
+function moveColumn(assetId: number, toIndex: number) {
+    const ids = columns.value.map((col) => col.id);
+    const fromIndex = ids.indexOf(assetId);
+
+    if (
+        fromIndex === -1 ||
+        toIndex < 0 ||
+        toIndex >= ids.length ||
+        fromIndex === toIndex
+    ) {
+        return;
+    }
+
+    ids.splice(toIndex, 0, ...ids.splice(fromIndex, 1));
+    assetOrder.value = ids;
+}
+
+function resetColumnOrder() {
+    assetOrder.value = [];
+}
+
+const draggedAssetId = ref<number | null>(null);
+const dropTargetAssetId = ref<number | null>(null);
+
+function onColumnDragStart(event: DragEvent, assetId: number) {
+    draggedAssetId.value = assetId;
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(assetId));
+    }
+}
+
+function onColumnDragOver(event: DragEvent, assetId: number) {
+    if (draggedAssetId.value === null) {
+        return;
+    }
+
+    event.preventDefault();
+    dropTargetAssetId.value = assetId;
+}
+
+function onColumnDragLeave(assetId: number) {
+    if (dropTargetAssetId.value === assetId) {
+        dropTargetAssetId.value = null;
+    }
+}
+
+function onColumnDrop(assetId: number) {
+    if (draggedAssetId.value !== null) {
+        moveColumn(
+            draggedAssetId.value,
+            columns.value.findIndex((col) => col.id === assetId),
+        );
+    }
+
+    onColumnDragEnd();
+}
+
+function onColumnDragEnd() {
+    draggedAssetId.value = null;
+    dropTargetAssetId.value = null;
+}
+
+/** An asset without a recorded amount in the statement holds nothing. */
+function amountOf(statement: Statement, assetId: number): number {
+    return statement.amounts[assetId] ?? 0;
 }
 
 function amountsOf(statement: Statement): Record<number, number> {
@@ -125,9 +213,9 @@ const form = useForm({
 /** Values last prefilled into the create form, to tell untouched fields from edited ones. */
 const prefilledAmounts = ref<Record<number, number>>({});
 
-function amountError(vaultId: number): string | undefined {
+function amountError(assetId: number): string | undefined {
     return (form.errors as Record<string, string | undefined>)[
-        `amounts.${vaultId}`
+        `amounts.${assetId}`
     ];
 }
 
@@ -612,11 +700,87 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <CardHeader>
                     <CardTitle class="leading-8">Table</CardTitle>
 
-                    <CardAction>
+                    <CardAction class="flex items-center gap-2">
+                        <Popover>
+                            <PopoverTrigger as-child>
+                                <Button
+                                    size="icon-sm"
+                                    variant="outline"
+                                    class="cursor-pointer"
+                                    aria-label="Column order"
+                                >
+                                    <Columns3 class="size-3" />
+                                </Button>
+                            </PopoverTrigger>
+
+                            <PopoverContent align="end" class="w-64 p-2">
+                                <p
+                                    class="px-2 pt-1 pb-2 text-xs text-muted-foreground"
+                                >
+                                    Column order. You can also drag the column
+                                    headers.
+                                </p>
+
+                                <ul>
+                                    <li
+                                        v-for="(col, idx) in columns"
+                                        :key="col.id"
+                                        class="flex items-center gap-2 rounded-md py-0.5 pl-2 text-sm"
+                                    >
+                                        <span
+                                            class="size-2.5 shrink-0 rounded-full"
+                                            :style="{
+                                                backgroundColor: col.color,
+                                            }"
+                                        />
+
+                                        <span class="flex-1 truncate">
+                                            {{ col.label }}
+                                        </span>
+
+                                        <Button
+                                            size="icon-sm"
+                                            variant="ghost"
+                                            class="cursor-pointer"
+                                            :aria-label="`Move ${col.label} earlier`"
+                                            :disabled="idx === 0"
+                                            @click="moveColumn(col.id, idx - 1)"
+                                        >
+                                            <ArrowUp class="size-4" />
+                                        </Button>
+
+                                        <Button
+                                            size="icon-sm"
+                                            variant="ghost"
+                                            class="cursor-pointer"
+                                            :aria-label="`Move ${col.label} later`"
+                                            :disabled="
+                                                idx === columns.length - 1
+                                            "
+                                            @click="moveColumn(col.id, idx + 1)"
+                                        >
+                                            <ArrowDown class="size-4" />
+                                        </Button>
+                                    </li>
+                                </ul>
+
+                                <Button
+                                    v-if="assetOrder.length > 0"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="mt-1 w-full cursor-pointer"
+                                    @click="resetColumnOrder()"
+                                >
+                                    Reset to alphabetical
+                                </Button>
+                            </PopoverContent>
+                        </Popover>
+
                         <Button
                             size="icon-sm"
                             variant="outline"
                             class="cursor-pointer"
+                            aria-label="Add statement"
                             @click="openCreate()"
                         >
                             <Plus class="size-3" />
@@ -688,7 +852,25 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     <th
                                         v-for="col in columns"
                                         :key="col.id"
-                                        class="px-2 py-2 text-right"
+                                        draggable="true"
+                                        class="cursor-grab px-2 py-2 text-right transition-colors select-none active:cursor-grabbing"
+                                        :class="{
+                                            'opacity-40':
+                                                draggedAssetId === col.id,
+                                            'bg-muted text-foreground':
+                                                dropTargetAssetId === col.id &&
+                                                draggedAssetId !== col.id,
+                                        }"
+                                        title="Drag to reorder"
+                                        @dragstart="
+                                            onColumnDragStart($event, col.id)
+                                        "
+                                        @dragover="
+                                            onColumnDragOver($event, col.id)
+                                        "
+                                        @dragleave="onColumnDragLeave(col.id)"
+                                        @drop.prevent="onColumnDrop(col.id)"
+                                        @dragend="onColumnDragEnd()"
                                     >
                                         {{ col.label }}
                                     </th>
@@ -1159,12 +1341,12 @@ const breadcrumbs: BreadcrumbItem[] = [
                             :key="col.id"
                             class="space-y-2"
                         >
-                            <Label :for="`stmt-vault-${col.id}`">{{
+                            <Label :for="`stmt-asset-${col.id}`">{{
                                 col.label
                             }}</Label>
 
                             <Input
-                                :id="`stmt-vault-${col.id}`"
+                                :id="`stmt-asset-${col.id}`"
                                 v-model="form.amounts[col.id]"
                                 type="number"
                                 min="0"
