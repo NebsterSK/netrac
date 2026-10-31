@@ -6,6 +6,7 @@ use App\Data\Finance\ExpenseCategoryBreakdownData;
 use App\Data\Finance\MonthlyAverageData;
 use App\Data\Finance\MonthlyBalanceData;
 use App\Data\Finance\PeriodAveragesData;
+use App\Models\Finance\Asset;
 use App\Models\Finance\ExpenseCategory;
 use App\Models\Finance\Statement;
 use Illuminate\Support\Collection;
@@ -16,8 +17,10 @@ class DashboardController extends Controller
 {
     public function __invoke(): Response
     {
-        $balances = MonthlyBalanceData::fromStatements(Statement::all())
-            ->reject(fn (MonthlyBalanceData $balance): bool => $balance->is_draft);
+        $balances = MonthlyBalanceData::fromStatements(
+            Statement::with('balances')->get(),
+            Asset::where('tracks_monthly_balance', true)->first(),
+        )->reject(fn (MonthlyBalanceData $balance): bool => $balance->is_draft);
 
         $monthlyAverages = $balances
             ->groupBy(fn (MonthlyBalanceData $balance): int => (int) substr($balance->date, 5, 2))

@@ -1,9 +1,14 @@
 <?php
 
+use App\Models\Finance\Asset;
 use App\Models\Finance\Expense;
 use App\Models\Finance\ExpenseCategory;
 use App\Models\Finance\Statement;
 use Inertia\Testing\AssertableInertia as Assert;
+
+beforeEach(function () {
+    $this->cash = Asset::factory()->tracksMonthlyBalance()->create();
+});
 
 describe('access control', function () {
     it('redirects guests to login', function () {
@@ -32,10 +37,10 @@ it('reports null period averages with no balances', function () {
 });
 
 it('averages derived balances per calendar month', function () {
-    Statement::factory()->create(['date' => '2023-02-01', 'account' => 1000]);
-    Statement::factory()->create(['date' => '2023-03-01', 'account' => 1100]);
-    Statement::factory()->create(['date' => '2024-02-01', 'account' => 2000]);
-    Statement::factory()->create(['date' => '2024-03-01', 'account' => 2201]);
+    Statement::factory()->withBalance($this->cash, 1000)->create(['date' => '2023-02-01']);
+    Statement::factory()->withBalance($this->cash, 1100)->create(['date' => '2023-03-01']);
+    Statement::factory()->withBalance($this->cash, 2000)->create(['date' => '2024-02-01']);
+    Statement::factory()->withBalance($this->cash, 2201)->create(['date' => '2024-03-01']);
 
     $this->actingAs(verifiedUser())
         ->get(route('dashboard'))
@@ -50,10 +55,10 @@ it('averages derived balances per calendar month', function () {
 });
 
 it('computes the period averages from derived balances', function () {
-    Statement::factory()->create(['date' => '2024-01-01', 'account' => 1000]);
-    Statement::factory()->create(['date' => '2024-02-01', 'account' => 1100]);
-    Statement::factory()->create(['date' => '2024-03-01', 'account' => 1300]);
-    Statement::factory()->create(['date' => '2024-04-01', 'account' => 1600]);
+    Statement::factory()->withBalance($this->cash, 1000)->create(['date' => '2024-01-01']);
+    Statement::factory()->withBalance($this->cash, 1100)->create(['date' => '2024-02-01']);
+    Statement::factory()->withBalance($this->cash, 1300)->create(['date' => '2024-03-01']);
+    Statement::factory()->withBalance($this->cash, 1600)->create(['date' => '2024-04-01']);
 
     $this->actingAs(verifiedUser())
         ->get(route('dashboard'))
@@ -63,9 +68,9 @@ it('computes the period averages from derived balances', function () {
 });
 
 it('leaves a draft balance out of the averages', function () {
-    Statement::factory()->create(['date' => '2024-01-01', 'account' => 1000]);
-    Statement::factory()->create(['date' => '2024-02-01', 'account' => 1100]);
-    Statement::factory()->draft()->create(['date' => '2024-03-01', 'account' => 9000]);
+    Statement::factory()->withBalance($this->cash, 1000)->create(['date' => '2024-01-01']);
+    Statement::factory()->withBalance($this->cash, 1100)->create(['date' => '2024-02-01']);
+    Statement::factory()->draft()->withBalance($this->cash, 9000)->create(['date' => '2024-03-01']);
 
     $this->actingAs(verifiedUser())
         ->get(route('dashboard'))

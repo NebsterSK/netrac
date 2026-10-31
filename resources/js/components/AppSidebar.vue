@@ -5,6 +5,7 @@ import {
     ClipboardList,
     Dumbbell,
     FolderTree,
+    Landmark,
     LayoutGrid,
     Receipt,
     Tags,
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import buzerlistok from '@/routes/buzerlistok';
+import assets from '@/routes/finance/assets';
 import expenseCategories from '@/routes/finance/expense-categories';
 import expenses from '@/routes/finance/expenses';
 import monthlyBalance from '@/routes/finance/monthly-balance';
@@ -63,6 +65,11 @@ const mainNavGroups: NavGroup[] = [
                 title: 'Net Worth',
                 href: netWorth.index(),
                 icon: TrendingUp,
+            },
+            {
+                title: 'Assets',
+                href: assets.index(),
+                icon: Landmark,
             },
             {
                 title: 'Expenses',
