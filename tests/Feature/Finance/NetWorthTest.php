@@ -1,20 +1,24 @@
 <?php
 
 use App\Models\Finance\Statement;
+use App\Models\Finance\Vault;
 use Inertia\Testing\AssertableInertia as Assert;
 
+/**
+ * A valid statement with 1000 in every vault.
+ */
 function statementPayload(array $overrides = []): array
 {
     return array_merge([
         'date' => '2024-05-01',
-        'account' => 1000,
-        'legacy_upgrade' => 2000,
-        'uniqa_sds' => 3000,
-        'uniqa_dds' => 4000,
-        'finax' => 5000,
-        'trading212' => 6000,
+        'amounts' => Vault::pluck('id')->mapWithKeys(fn (int $vaultId): array => [$vaultId => 1000])->all(),
         'is_draft' => false,
     ], $overrides);
+}
+
+function accountVault(): Vault
+{
+    return Vault::where('name', 'Account')->sole();
 }
 
 describe('access control', function () {
@@ -31,39 +35,85 @@ describe('access control', function () {
     });
 });
 
-it('lists statements newest first', function () {
+it('lists vaults in their saved order', function () {
+    $this->actingAs(verifiedUser())
+        ->get(route('finance.net-worth.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('vaults', 6)
+            ->where('vaults.0.name', 'Account')
+            ->where('vaults.0.color', '#9ca3af')
+            ->where('vaults.5.name', 'Trading 212'));
+});
+
+it('lists statements newest first with their vault amounts', function () {
+    $account = accountVault();
+
     Statement::factory()->create(['date' => '2024-01-01']);
-    Statement::factory()->create(['date' => '2024-03-01', 'account' => 12345]);
+    Statement::factory()->withAmount($account, 12345)->create(['date' => '2024-03-01']);
 
     $this->actingAs(verifiedUser())
         ->get(route('finance.net-worth.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('finance/NetWorth')
             ->has('statements', 2)
-            ->where('statements.0.account', 12345));
+            ->where("statements.0.amounts.{$account->id}", 12345));
 });
 
-it('stores a statement', function () {
+it('stores a statement with an amount for every vault', function () {
+    $account = accountVault();
+
     $this->actingAs(verifiedUser())
         ->post(route('finance.net-worth.store'), statementPayload())
         ->assertRedirect(route('finance.net-worth.index'))
         ->assertSessionHas('success');
 
-    $this->assertDatabaseHas('statements', ['account' => 1000, 'trading212' => 6000]);
+    $statement = Statement::sole();
+
+    expect($statement->vaults)->toHaveCount(Vault::count())
+        ->and($statement->amountIn($account))->toBe(1000);
 });
 
-it('requires every balance column on store', function () {
+it('requires an amount for every vault on store', function () {
+    $vaultErrors = Vault::pluck('id')->map(fn (int $vaultId): string => "amounts.{$vaultId}")->all();
+
     $this->actingAs(verifiedUser())
         ->from(route('finance.net-worth.index'))
-        ->post(route('finance.net-worth.store'), [])
-        ->assertSessionHasErrors(['date', 'account', 'legacy_upgrade', 'uniqa_sds', 'uniqa_dds', 'finax', 'trading212']);
+        ->post(route('finance.net-worth.store'), ['amounts' => ['placeholder' => 1]])
+        ->assertSessionHasErrors(['date', 'amounts', ...$vaultErrors]);
 });
 
-it('rejects negative balances', function () {
+it('names the vault in amount errors', function () {
+    $account = accountVault();
+    $payload = statementPayload();
+    unset($payload['amounts'][$account->id]);
+
     $this->actingAs(verifiedUser())
         ->from(route('finance.net-worth.index'))
-        ->post(route('finance.net-worth.store'), statementPayload(['account' => -1]))
-        ->assertSessionHasErrors('account');
+        ->post(route('finance.net-worth.store'), $payload)
+        ->assertSessionHasErrors(["amounts.{$account->id}" => 'The Account field is required.']);
+});
+
+it('rejects an amount for an unknown vault', function () {
+    $payload = statementPayload();
+    $payload['amounts'][999999] = 1000;
+
+    $this->actingAs(verifiedUser())
+        ->from(route('finance.net-worth.index'))
+        ->post(route('finance.net-worth.store'), $payload)
+        ->assertSessionHasErrors('amounts');
+
+    expect(Statement::count())->toBe(0);
+});
+
+it('rejects negative amounts', function () {
+    $account = accountVault();
+    $payload = statementPayload();
+    $payload['amounts'][$account->id] = -1;
+
+    $this->actingAs(verifiedUser())
+        ->from(route('finance.net-worth.index'))
+        ->post(route('finance.net-worth.store'), $payload)
+        ->assertSessionHasErrors("amounts.{$account->id}");
 });
 
 it('rejects a duplicate date on store', function () {
@@ -83,14 +133,21 @@ it('blocks guests from storing', function () {
 });
 
 it('updates a statement', function () {
-    $statement = Statement::factory()->create(['date' => '2024-07-01', 'account' => 100]);
+    $account = accountVault();
+    $statement = Statement::factory()->withAmount($account, 100)->create(['date' => '2024-07-01']);
+
+    $payload = statementPayload(['date' => '2024-08-01']);
+    $payload['amounts'][$account->id] = 777;
 
     $this->actingAs(verifiedUser())
-        ->patch(route('finance.net-worth.update', $statement), statementPayload(['date' => '2024-08-01', 'account' => 777]))
+        ->patch(route('finance.net-worth.update', $statement), $payload)
         ->assertRedirect(route('finance.net-worth.index'))
         ->assertSessionHas('success');
 
-    expect($statement->refresh()->account)->toBe(777)
+    $statement->refresh();
+
+    expect($statement->amountIn($account))->toBe(777)
+        ->and($statement->vaults)->toHaveCount(Vault::count())
         ->and($statement->date->toDateString())->toBe('2024-08-01');
 });
 
@@ -111,8 +168,8 @@ it('rejects a note longer than 255 characters', function () {
     expect(Statement::count())->toBe(0);
 });
 
-it('deletes a statement', function () {
-    $statement = Statement::factory()->create();
+it('deletes a statement with its amounts', function () {
+    $statement = Statement::factory()->withAmount(accountVault(), 500)->create();
 
     $this->actingAs(verifiedUser())
         ->delete(route('finance.net-worth.destroy', $statement))
@@ -120,6 +177,7 @@ it('deletes a statement', function () {
         ->assertSessionHas('success');
 
     $this->assertModelMissing($statement);
+    $this->assertDatabaseMissing('statement_vault', ['statement_id' => $statement->id]);
 });
 
 describe('drafts', function () {
@@ -180,14 +238,20 @@ describe('drafts', function () {
     });
 
     it('finalizes a draft', function () {
+        $account = accountVault();
         $draft = Statement::factory()->draft()->create(['date' => '2024-05-01']);
 
+        $payload = statementPayload();
+        $payload['amounts'][$account->id] = 999;
+
         $this->actingAs(verifiedUser())
-            ->put(route('finance.net-worth.update', $draft), statementPayload(['account' => 999]))
+            ->put(route('finance.net-worth.update', $draft), $payload)
             ->assertSessionHasNoErrors();
 
-        expect($draft->refresh()->is_draft)->toBeFalse()
-            ->and($draft->account)->toBe(999);
+        $draft->refresh();
+
+        expect($draft->is_draft)->toBeFalse()
+            ->and($draft->amountIn($account))->toBe(999);
     });
 
     it('turns the latest statement into a draft', function () {

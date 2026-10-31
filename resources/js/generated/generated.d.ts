@@ -67,14 +67,16 @@ overall: number | null,
 export type StatementData = {
 id: number,
 date: string,
-account: number,
-legacy_upgrade: number,
-uniqa_sds: number,
-uniqa_dds: number,
-finax: number,
-trading212: number,
+amounts: Record<number, number>,
 note: string | null,
 is_draft: boolean,
+};
+export type VaultData = {
+id: number,
+name: string,
+color: string | null,
+tracks_monthly_balance: boolean,
+statements_count: number | null,
 };
 }
 namespace Health {

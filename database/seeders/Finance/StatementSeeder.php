@@ -3,34 +3,36 @@
 namespace Database\Seeders\Finance;
 
 use App\Models\Finance\Statement;
+use App\Models\Finance\Vault;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 class StatementSeeder extends Seeder
 {
+    /**
+     * Seed two years of statements for the vaults created by the migrations,
+     * each vault drifting from a random starting balance.
+     */
     public function run(): void
     {
-        $account = 5000;
-        $legacyUpgrade = 3000;
-        $uniqaSds = 2000;
-        $uniqaDds = 1500;
-        $finax = 4000;
-        $trading212 = 2500;
+        $vaults = Vault::orderBy('position')->get();
+
+        $balances = $vaults
+            ->mapWithKeys(fn (Vault $vault): array => [$vault->id => rand(15, 50) * 100])
+            ->all();
 
         $start = Carbon::now()->subMonths(24)->startOfMonth();
 
         for ($idx = 0; $idx < 24; $idx++) {
-            $date = $start->copy()->addMonths($idx);
-
-            Statement::create([
-                'date' => $date->toDateString(),
-                'account' => $account += rand(80, 150) * (rand(1, 5) === 1 ? -1 : 1),
-                'legacy_upgrade' => $legacyUpgrade += rand(50, 120) * (rand(1, 5) === 1 ? -1 : 1),
-                'uniqa_sds' => $uniqaSds += rand(40, 100) * (rand(1, 5) === 1 ? -1 : 1),
-                'uniqa_dds' => $uniqaDds += rand(30, 90) * (rand(1, 5) === 1 ? -1 : 1),
-                'finax' => $finax += rand(60, 130) * (rand(1, 5) === 1 ? -1 : 1),
-                'trading212' => $trading212 += rand(70, 140) * (rand(1, 5) === 1 ? -1 : 1),
+            $statement = Statement::create([
+                'date' => $start->copy()->addMonths($idx)->toDateString(),
             ]);
+
+            foreach ($vaults as $vault) {
+                $balances[$vault->id] += rand(40, 150) * (rand(1, 5) === 1 ? -1 : 1);
+
+                $statement->vaults()->attach($vault->id, ['amount' => max(0, $balances[$vault->id])]);
+            }
         }
     }
 }

@@ -67,24 +67,44 @@ import { destroy, index, store, update } from '@/routes/finance/net-worth';
 import type { BreadcrumbItem } from '@/types';
 
 type Statement = App.Data.Finance.StatementData;
-
-const columns = [
-    { key: 'account', label: 'Account', color: 'rgb(156, 163, 175)' },
-    {
-        key: 'legacy_upgrade',
-        label: 'Legacy Upgrade',
-        color: 'rgb(5, 89, 210)',
-    },
-    { key: 'uniqa_sds', label: 'Uniqa SDS', color: 'rgb(0, 92, 169)' },
-    { key: 'uniqa_dds', label: 'Uniqa DDS', color: 'rgb(0, 92, 169)' },
-    { key: 'finax', label: 'Finax', color: 'rgb(203, 231, 255)' },
-    { key: 'trading212', label: 'Trading 212', color: 'rgb(0, 171, 224)' },
-] as const;
+type Vault = App.Data.Finance.VaultData;
 
 const props = defineProps<{
+    vaults: Vault[];
     statements: Statement[];
     existingDates: string[];
 }>();
+
+/** Color for a vault saved without one. */
+const FALLBACK_VAULT_COLOR = '#9ca3af';
+
+function hexToRgb(hex: string): string {
+    const red = parseInt(hex.slice(1, 3), 16);
+    const green = parseInt(hex.slice(3, 5), 16);
+    const blue = parseInt(hex.slice(5, 7), 16);
+
+    return `rgb(${red}, ${green}, ${blue})`;
+}
+
+/** One table column / chart series per vault, in the vaults' order. */
+const columns = computed(() =>
+    props.vaults.map((vault) => ({
+        id: vault.id,
+        label: vault.name,
+        color: hexToRgb(vault.color ?? FALLBACK_VAULT_COLOR),
+    })),
+);
+
+/** A vault without a recorded amount in the statement holds nothing. */
+function amountOf(statement: Statement, vaultId: number): number {
+    return statement.amounts[vaultId] ?? 0;
+}
+
+function amountsOf(statement: Statement): Record<number, number> {
+    return Object.fromEntries(
+        columns.value.map((col) => [col.id, amountOf(statement, col.id)]),
+    );
+}
 
 const showDialog = ref(false);
 const editingStatement = ref<Statement | null>(null);
@@ -97,20 +117,19 @@ const shortMonths = Array.from({ length: 12 }, (_, idx) =>
 
 const form = useForm({
     date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
-    account: undefined as number | undefined,
-    legacy_upgrade: undefined as number | undefined,
-    uniqa_sds: undefined as number | undefined,
-    uniqa_dds: undefined as number | undefined,
-    finax: undefined as number | undefined,
-    trading212: undefined as number | undefined,
+    amounts: {} as Record<number, number | undefined>,
     note: '',
     is_draft: false,
 });
 
-type AmountKey = (typeof columns)[number]['key'];
-
 /** Values last prefilled into the create form, to tell untouched fields from edited ones. */
-const prefilledAmounts = ref<Partial<Record<AmountKey, number>>>({});
+const prefilledAmounts = ref<Record<number, number>>({});
+
+function amountError(vaultId: number): string | undefined {
+    return (form.errors as Record<string, string | undefined>)[
+        `amounts.${vaultId}`
+    ];
+}
 
 function roundUpToHundred(amount: number): number {
     return Math.ceil(amount / 100) * 100;
@@ -130,23 +149,23 @@ function prefillFromPreviousStatement() {
         )
         .at(-1);
 
-    const nextPrefill: Partial<Record<AmountKey, number>> = {};
+    const nextPrefill: Record<number, number> = {};
 
-    for (const col of columns) {
+    for (const col of columns.value) {
         const isUntouched =
-            form[col.key] === undefined ||
-            form[col.key] === prefilledAmounts.value[col.key];
+            form.amounts[col.id] === undefined ||
+            form.amounts[col.id] === prefilledAmounts.value[col.id];
 
         const amount = previous
-            ? roundUpToHundred(previous[col.key])
+            ? roundUpToHundred(amountOf(previous, col.id))
             : undefined;
 
         if (isUntouched) {
-            form[col.key] = amount;
+            form.amounts[col.id] = amount;
         }
 
         if (amount !== undefined) {
-            nextPrefill[col.key] = amount;
+            nextPrefill[col.id] = amount;
         }
     }
 
@@ -156,12 +175,7 @@ function prefillFromPreviousStatement() {
 function openCreate() {
     editingStatement.value = null;
     form.date = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
-    form.account = undefined;
-    form.legacy_upgrade = undefined;
-    form.uniqa_sds = undefined;
-    form.uniqa_dds = undefined;
-    form.finax = undefined;
-    form.trading212 = undefined;
+    form.amounts = {};
     form.note = '';
     form.is_draft = false;
     prefilledAmounts.value = {};
@@ -174,12 +188,7 @@ function openEdit(statement: Statement) {
     editingStatement.value = statement;
     const date = new Date(statement.date);
     form.date = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
-    form.account = statement.account;
-    form.legacy_upgrade = statement.legacy_upgrade;
-    form.uniqa_sds = statement.uniqa_sds;
-    form.uniqa_dds = statement.uniqa_dds;
-    form.finax = statement.finax;
-    form.trading212 = statement.trading212;
+    form.amounts = amountsOf(statement);
     form.note = statement.note ?? '';
     form.is_draft = statement.is_draft;
     pickerYear.value = date.getFullYear();
@@ -282,12 +291,7 @@ function submitForm() {
 function finalizeStatement(statement: Statement) {
     router.put(update.url(statement.id), {
         date: statement.date.slice(0, 10),
-        account: statement.account,
-        legacy_upgrade: statement.legacy_upgrade,
-        uniqa_sds: statement.uniqa_sds,
-        uniqa_dds: statement.uniqa_dds,
-        finax: statement.finax,
-        trading212: statement.trading212,
+        amounts: amountsOf(statement),
         note: statement.note,
         is_draft: false,
     });
@@ -314,13 +318,9 @@ function getYear(date: string): number {
 }
 
 function statementTotal(statement: Statement): number {
-    return (
-        statement.account +
-        statement.legacy_upgrade +
-        statement.uniqa_sds +
-        statement.uniqa_dds +
-        statement.finax +
-        statement.trading212
+    return columns.value.reduce(
+        (sum, col) => sum + amountOf(statement, col.id),
+        0,
     );
 }
 
@@ -397,36 +397,31 @@ const averageGainPercent = computed(() => {
     return percents.reduce((sum, val) => sum + val, 0) / percents.length;
 });
 
-type ColumnKey = (typeof columns)[number]['key'];
-
 const columnGainByStatementId = computed(() => {
     const result: Record<
         number,
-        Record<ColumnKey, { gain: number; percent: number | null }>
+        Record<number, { gain: number; percent: number | null }>
     > = {};
     const sorted = sortedStatements.value;
 
     for (let idx = 0; idx < sorted.length; idx++) {
-        const entry: Record<string, { gain: number; percent: number | null }> =
+        const entry: Record<number, { gain: number; percent: number | null }> =
             {};
 
-        for (const col of columns) {
+        for (const col of columns.value) {
             if (idx === 0) {
-                entry[col.key] = { gain: 0, percent: null };
+                entry[col.id] = { gain: 0, percent: null };
             } else {
-                const prev = sorted[idx - 1][col.key];
-                const curr = sorted[idx][col.key];
-                entry[col.key] = {
+                const prev = amountOf(sorted[idx - 1], col.id);
+                const curr = amountOf(sorted[idx], col.id);
+                entry[col.id] = {
                     gain: curr - prev,
                     percent: prev !== 0 ? ((curr - prev) / prev) * 100 : null,
                 };
             }
         }
 
-        result[sorted[idx].id] = entry as Record<
-            ColumnKey,
-            { gain: number; percent: number | null }
-        >;
+        result[sorted[idx].id] = entry;
     }
 
     return result;
@@ -483,7 +478,7 @@ const chartData = computed(() => {
 
     return {
         labels,
-        datasets: columns.map((col) => {
+        datasets: columns.value.map((col) => {
             const fillColor = col.color
                 .replace('rgb(', 'rgba(')
                 .replace(')', ', 0.1)');
@@ -493,7 +488,7 @@ const chartData = computed(() => {
 
             return {
                 label: col.label,
-                data: sorted.map((stmt) => stmt[col.key]),
+                data: sorted.map((stmt) => amountOf(stmt, col.id)),
                 borderColor: col.color,
                 backgroundColor: fillColor,
                 pointBackgroundColor: sorted.map((stmt) =>
@@ -692,7 +687,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                                     <th
                                         v-for="col in columns"
-                                        :key="col.key"
+                                        :key="col.id"
                                         class="px-2 py-2 text-right"
                                     >
                                         {{ col.label }}
@@ -830,12 +825,12 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                                         <td
                                             v-for="col in columns"
-                                            :key="col.key"
+                                            :key="col.id"
                                             class="px-2 py-3 text-right font-mono"
                                             :class="
                                                 columnGainByStatementId[
                                                     statement.id
-                                                ][col.key].gain < 0
+                                                ][col.id].gain < 0
                                                     ? 'text-red-600 dark:text-red-400'
                                                     : ''
                                             "
@@ -844,7 +839,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                 v-if="
                                                     columnGainByStatementId[
                                                         statement.id
-                                                    ][col.key].percent !== null
+                                                    ][col.id].percent !== null
                                                 "
                                             >
                                                 <Tooltip>
@@ -854,9 +849,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                         >
                                                             {{
                                                                 formatAmount(
-                                                                    statement[
-                                                                        col.key
-                                                                    ],
+                                                                    amountOf(
+                                                                        statement,
+                                                                        col.id,
+                                                                    ),
                                                                 )
                                                             }}
                                                         </span>
@@ -867,7 +863,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                             :class="
                                                                 columnGainByStatementId[
                                                                     statement.id
-                                                                ][col.key]
+                                                                ][col.id]
                                                                     .gain >= 0
                                                                     ? 'text-green-400 dark:text-green-600'
                                                                     : 'text-red-400 dark:text-red-600'
@@ -876,7 +872,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                             {{
                                                                 columnGainByStatementId[
                                                                     statement.id
-                                                                ][col.key]
+                                                                ][col.id]
                                                                     .gain >= 0
                                                                     ? '+'
                                                                     : '−'
@@ -888,7 +884,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                                                 .id
                                                                         ][
                                                                             col
-                                                                                .key
+                                                                                .id
                                                                         ].gain,
                                                                     ),
                                                                 )
@@ -896,7 +892,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                             ({{
                                                                 columnGainByStatementId[
                                                                     statement.id
-                                                                ][col.key]
+                                                                ][col.id]
                                                                     .percent! >=
                                                                 0
                                                                     ? '+'
@@ -906,7 +902,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                                     columnGainByStatementId[
                                                                         statement
                                                                             .id
-                                                                    ][col.key]
+                                                                    ][col.id]
                                                                         .percent!,
                                                                 ).toLocaleString(
                                                                     'fr-FR',
@@ -924,7 +920,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                                             <template v-else>
                                                 {{
                                                     formatAmount(
-                                                        statement[col.key],
+                                                        amountOf(
+                                                            statement,
+                                                            col.id,
+                                                        ),
                                                     )
                                                 }}
                                             </template>
@@ -1157,16 +1156,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-4">
                         <div
                             v-for="col in columns"
-                            :key="col.key"
+                            :key="col.id"
                             class="space-y-2"
                         >
-                            <Label :for="`stmt-${col.key}`">{{
+                            <Label :for="`stmt-vault-${col.id}`">{{
                                 col.label
                             }}</Label>
 
                             <Input
-                                :id="`stmt-${col.key}`"
-                                v-model="form[col.key]"
+                                :id="`stmt-vault-${col.id}`"
+                                v-model="form.amounts[col.id]"
                                 type="number"
                                 min="0"
                                 inputmode="numeric"
@@ -1174,7 +1173,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 :disabled="form.processing"
                             />
 
-                            <InputError :message="form.errors[col.key]" />
+                            <InputError :message="amountError(col.id)" />
                         </div>
                     </div>
 

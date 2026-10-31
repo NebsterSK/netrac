@@ -8,6 +8,7 @@ use App\Data\Finance\MonthlyBalanceData;
 use App\Data\Finance\PeriodAveragesData;
 use App\Models\Finance\ExpenseCategory;
 use App\Models\Finance\Statement;
+use App\Models\Finance\Vault;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,7 +17,7 @@ class DashboardController extends Controller
 {
     public function __invoke(): Response
     {
-        $balances = MonthlyBalanceData::fromStatements(Statement::all())
+        $balances = MonthlyBalanceData::fromStatements(Statement::with('vaults')->get(), Vault::monthlyBalanceVault())
             ->reject(fn (MonthlyBalanceData $balance): bool => $balance->is_draft);
 
         $monthlyAverages = $balances

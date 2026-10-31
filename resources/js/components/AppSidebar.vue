@@ -9,6 +9,7 @@ import {
     Receipt,
     Tags,
     TrendingUp,
+    Vault,
     Wallet,
 } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
@@ -30,6 +31,7 @@ import expenseCategories from '@/routes/finance/expense-categories';
 import expenses from '@/routes/finance/expenses';
 import monthlyBalance from '@/routes/finance/monthly-balance';
 import netWorth from '@/routes/finance/net-worth';
+import vaults from '@/routes/finance/vaults';
 import exerciseCategories from '@/routes/health/exercise-categories';
 import exercises from '@/routes/health/exercises';
 import sessions from '@/routes/health/sessions';
@@ -63,6 +65,11 @@ const mainNavGroups: NavGroup[] = [
                 title: 'Net Worth',
                 href: netWorth.index(),
                 icon: TrendingUp,
+            },
+            {
+                title: 'Vaults',
+                href: vaults.index(),
+                icon: Vault,
             },
             {
                 title: 'Expenses',
