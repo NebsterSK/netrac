@@ -18,6 +18,14 @@ goals: App.Data.Buzerlistok.GoalData[],
 };
 }
 namespace Finance {
+export type AssetData = {
+id: number,
+name: string,
+color: string | null,
+position: number,
+tracks_monthly_balance: boolean,
+balances_count: number | null,
+};
 export type ExpenseCategoryBreakdownData = {
 id: number,
 name: string,
@@ -67,12 +75,7 @@ overall: number | null,
 export type StatementData = {
 id: number,
 date: string,
-account: number,
-legacy_upgrade: number,
-uniqa_sds: number,
-uniqa_dds: number,
-finax: number,
-trading212: number,
+balances: { [key: number]: number },
 note: string | null,
 is_draft: boolean,
 };

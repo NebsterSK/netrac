@@ -66,25 +66,46 @@ import { dashboard } from '@/routes';
 import { destroy, index, store, update } from '@/routes/finance/net-worth';
 import type { BreadcrumbItem } from '@/types';
 
+type Asset = App.Data.Finance.AssetData;
 type Statement = App.Data.Finance.StatementData;
 
-const columns = [
-    { key: 'account', label: 'Account', color: 'rgb(156, 163, 175)' },
-    {
-        key: 'legacy_upgrade',
-        label: 'Legacy Upgrade',
-        color: 'rgb(5, 89, 210)',
-    },
-    { key: 'uniqa_sds', label: 'Uniqa SDS', color: 'rgb(0, 92, 169)' },
-    { key: 'uniqa_dds', label: 'Uniqa DDS', color: 'rgb(0, 92, 169)' },
-    { key: 'finax', label: 'Finax', color: 'rgb(203, 231, 255)' },
-    { key: 'trading212', label: 'Trading 212', color: 'rgb(0, 171, 224)' },
-] as const;
+/** Neutral gray for assets without a chosen color. */
+const fallbackColor = '#9ca3af';
 
 const props = defineProps<{
+    assets: Asset[];
     statements: Statement[];
     existingDates: string[];
 }>();
+
+/** One table column (and chart series) per asset, keyed by asset id. */
+const columns = computed(() =>
+    props.assets.map((asset) => ({
+        key: asset.id,
+        label: asset.name,
+        color: asset.color ?? fallbackColor,
+    })),
+);
+
+/** The amount an asset held on a statement; 0 when none was recorded. */
+function balanceOf(statement: Statement, assetId: number): number {
+    return statement.balances[assetId] ?? 0;
+}
+
+/** Every asset's amount on a statement, keyed by asset id. */
+function balancesOf(statement: Statement): Record<number, number> {
+    return Object.fromEntries(
+        columns.value.map((col) => [col.key, balanceOf(statement, col.key)]),
+    );
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+    const red = parseInt(hex.slice(1, 3), 16);
+    const green = parseInt(hex.slice(3, 5), 16);
+    const blue = parseInt(hex.slice(5, 7), 16);
+
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
 
 const showDialog = ref(false);
 const editingStatement = ref<Statement | null>(null);
@@ -97,20 +118,13 @@ const shortMonths = Array.from({ length: 12 }, (_, idx) =>
 
 const form = useForm({
     date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
-    account: undefined as number | undefined,
-    legacy_upgrade: undefined as number | undefined,
-    uniqa_sds: undefined as number | undefined,
-    uniqa_dds: undefined as number | undefined,
-    finax: undefined as number | undefined,
-    trading212: undefined as number | undefined,
+    balances: {} as Record<number, number | undefined>,
     note: '',
     is_draft: false,
 });
 
-type AmountKey = (typeof columns)[number]['key'];
-
 /** Values last prefilled into the create form, to tell untouched fields from edited ones. */
-const prefilledAmounts = ref<Partial<Record<AmountKey, number>>>({});
+const prefilledAmounts = ref<Record<number, number>>({});
 
 function roundUpToHundred(amount: number): number {
     return Math.ceil(amount / 100) * 100;
@@ -130,19 +144,19 @@ function prefillFromPreviousStatement() {
         )
         .at(-1);
 
-    const nextPrefill: Partial<Record<AmountKey, number>> = {};
+    const nextPrefill: Record<number, number> = {};
 
-    for (const col of columns) {
+    for (const col of columns.value) {
         const isUntouched =
-            form[col.key] === undefined ||
-            form[col.key] === prefilledAmounts.value[col.key];
+            form.balances[col.key] === undefined ||
+            form.balances[col.key] === prefilledAmounts.value[col.key];
 
         const amount = previous
-            ? roundUpToHundred(previous[col.key])
+            ? roundUpToHundred(balanceOf(previous, col.key))
             : undefined;
 
         if (isUntouched) {
-            form[col.key] = amount;
+            form.balances[col.key] = amount;
         }
 
         if (amount !== undefined) {
@@ -156,12 +170,7 @@ function prefillFromPreviousStatement() {
 function openCreate() {
     editingStatement.value = null;
     form.date = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
-    form.account = undefined;
-    form.legacy_upgrade = undefined;
-    form.uniqa_sds = undefined;
-    form.uniqa_dds = undefined;
-    form.finax = undefined;
-    form.trading212 = undefined;
+    form.balances = {};
     form.note = '';
     form.is_draft = false;
     prefilledAmounts.value = {};
@@ -174,12 +183,7 @@ function openEdit(statement: Statement) {
     editingStatement.value = statement;
     const date = new Date(statement.date);
     form.date = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
-    form.account = statement.account;
-    form.legacy_upgrade = statement.legacy_upgrade;
-    form.uniqa_sds = statement.uniqa_sds;
-    form.uniqa_dds = statement.uniqa_dds;
-    form.finax = statement.finax;
-    form.trading212 = statement.trading212;
+    form.balances = balancesOf(statement);
     form.note = statement.note ?? '';
     form.is_draft = statement.is_draft;
     pickerYear.value = date.getFullYear();
@@ -260,6 +264,13 @@ function selectMonth(month: number) {
     }
 }
 
+/** Validation errors for balances come back keyed as `balances.{assetId}`. */
+function balanceError(assetId: number): string | undefined {
+    return (form.errors as Record<string, string | undefined>)[
+        `balances.${assetId}`
+    ];
+}
+
 function submitForm() {
     const url = isEditing.value
         ? update.url(editingStatement.value!.id)
@@ -282,12 +293,7 @@ function submitForm() {
 function finalizeStatement(statement: Statement) {
     router.put(update.url(statement.id), {
         date: statement.date.slice(0, 10),
-        account: statement.account,
-        legacy_upgrade: statement.legacy_upgrade,
-        uniqa_sds: statement.uniqa_sds,
-        uniqa_dds: statement.uniqa_dds,
-        finax: statement.finax,
-        trading212: statement.trading212,
+        balances: balancesOf(statement),
         note: statement.note,
         is_draft: false,
     });
@@ -314,13 +320,9 @@ function getYear(date: string): number {
 }
 
 function statementTotal(statement: Statement): number {
-    return (
-        statement.account +
-        statement.legacy_upgrade +
-        statement.uniqa_sds +
-        statement.uniqa_dds +
-        statement.finax +
-        statement.trading212
+    return columns.value.reduce(
+        (sum, col) => sum + balanceOf(statement, col.key),
+        0,
     );
 }
 
@@ -397,25 +399,23 @@ const averageGainPercent = computed(() => {
     return percents.reduce((sum, val) => sum + val, 0) / percents.length;
 });
 
-type ColumnKey = (typeof columns)[number]['key'];
-
 const columnGainByStatementId = computed(() => {
     const result: Record<
         number,
-        Record<ColumnKey, { gain: number; percent: number | null }>
+        Record<number, { gain: number; percent: number | null }>
     > = {};
     const sorted = sortedStatements.value;
 
     for (let idx = 0; idx < sorted.length; idx++) {
-        const entry: Record<string, { gain: number; percent: number | null }> =
+        const entry: Record<number, { gain: number; percent: number | null }> =
             {};
 
-        for (const col of columns) {
+        for (const col of columns.value) {
             if (idx === 0) {
                 entry[col.key] = { gain: 0, percent: null };
             } else {
-                const prev = sorted[idx - 1][col.key];
-                const curr = sorted[idx][col.key];
+                const prev = balanceOf(sorted[idx - 1], col.key);
+                const curr = balanceOf(sorted[idx], col.key);
                 entry[col.key] = {
                     gain: curr - prev,
                     percent: prev !== 0 ? ((curr - prev) / prev) * 100 : null,
@@ -423,10 +423,7 @@ const columnGainByStatementId = computed(() => {
             }
         }
 
-        result[sorted[idx].id] = entry as Record<
-            ColumnKey,
-            { gain: number; percent: number | null }
-        >;
+        result[sorted[idx].id] = entry;
     }
 
     return result;
@@ -483,17 +480,13 @@ const chartData = computed(() => {
 
     return {
         labels,
-        datasets: columns.map((col) => {
-            const fillColor = col.color
-                .replace('rgb(', 'rgba(')
-                .replace(')', ', 0.1)');
-            const draftFillColor = col.color
-                .replace('rgb(', 'rgba(')
-                .replace(')', ', 0.03)');
+        datasets: columns.value.map((col) => {
+            const fillColor = hexToRgba(col.color, 0.1);
+            const draftFillColor = hexToRgba(col.color, 0.03);
 
             return {
                 label: col.label,
-                data: sorted.map((stmt) => stmt[col.key]),
+                data: sorted.map((stmt) => balanceOf(stmt, col.key)),
                 borderColor: col.color,
                 backgroundColor: fillColor,
                 pointBackgroundColor: sorted.map((stmt) =>
@@ -854,9 +847,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                         >
                                                             {{
                                                                 formatAmount(
-                                                                    statement[
-                                                                        col.key
-                                                                    ],
+                                                                    balanceOf(
+                                                                        statement,
+                                                                        col.key,
+                                                                    ),
                                                                 )
                                                             }}
                                                         </span>
@@ -924,7 +918,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                                             <template v-else>
                                                 {{
                                                     formatAmount(
-                                                        statement[col.key],
+                                                        balanceOf(
+                                                            statement,
+                                                            col.key,
+                                                        ),
                                                     )
                                                 }}
                                             </template>
@@ -1166,7 +1163,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                             <Input
                                 :id="`stmt-${col.key}`"
-                                v-model="form[col.key]"
+                                v-model="form.balances[col.key]"
                                 type="number"
                                 min="0"
                                 inputmode="numeric"
@@ -1174,7 +1171,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 :disabled="form.processing"
                             />
 
-                            <InputError :message="form.errors[col.key]" />
+                            <InputError
+                                :message="balanceError(col.key)"
+                            />
                         </div>
                     </div>
 
