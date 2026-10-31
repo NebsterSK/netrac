@@ -232,11 +232,7 @@ function daysDescending(week: Week): string[] {
 
 const submitting = ref(false);
 
-function submitMark(
-    goalId: number,
-    date: string,
-    status: MarkStatus | null,
-) {
+function submitMark(goalId: number, date: string, status: MarkStatus | null) {
     if (submitting.value) {
         return;
     }
@@ -601,7 +597,7 @@ function weekRange(week: Week): string {
                         <thead>
                             <tr>
                                 <th
-                                    class="px-2 py-1 text-left font-medium max-sm:sticky max-sm:pl-0 max-sm:left-0 max-sm:z-10 max-sm:bg-card"
+                                    class="px-2 py-1 text-left font-medium max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card max-sm:pl-0"
                                 ></th>
 
                                 <th
@@ -635,7 +631,7 @@ function weekRange(week: Week): string {
                                 :key="date"
                             >
                                 <td
-                                    class="px-2 py-1 whitespace-nowrap text-muted-foreground max-sm:sticky max-sm:pl-0 max-sm:left-0 max-sm:z-10 max-sm:bg-card"
+                                    class="px-2 py-1 whitespace-nowrap text-muted-foreground max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card max-sm:pl-0"
                                 >
                                     {{ formatDay(date) }}
                                 </td>

@@ -375,7 +375,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4">
+                                <th
+                                    class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4"
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -390,7 +392,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="px-2 py-2 text-right font-medium sm:px-4">
+                                <th
+                                    class="px-2 py-2 text-right font-medium sm:px-4"
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -405,7 +409,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4">
+                                <th
+                                    class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4"
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -420,7 +426,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4">
+                                <th
+                                    class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4"
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -479,13 +487,17 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </Badge>
                                 </td>
 
-                                <td class="hidden px-2 py-3 sm:table-cell sm:px-4">
+                                <td
+                                    class="hidden px-2 py-3 sm:table-cell sm:px-4"
+                                >
                                     <Badge variant="secondary" class="text-xs">
                                         {{ expense.expenseCategory.name }}
                                     </Badge>
                                 </td>
 
-                                <td class="px-2 py-3 text-right font-medium sm:px-4">
+                                <td
+                                    class="px-2 py-3 text-right font-medium sm:px-4"
+                                >
                                     <span class="font-mono">
                                         {{ formatAmount(expense.amount) }}
                                     </span>
@@ -497,11 +509,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </span>
                                 </td>
 
-                                <td class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4">
+                                <td
+                                    class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4"
+                                >
                                     {{ formatDate(expense.created_at) }}
                                 </td>
 
-                                <td class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4">
+                                <td
+                                    class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4"
+                                >
                                     {{ formatDate(expense.updated_at) }}
                                 </td>
 

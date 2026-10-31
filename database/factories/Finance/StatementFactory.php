@@ -2,6 +2,7 @@
 
 namespace Database\Factories\Finance;
 
+use App\Models\Finance\Asset;
 use App\Models\Finance\Statement;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -17,12 +18,6 @@ class StatementFactory extends Factory
     {
         return [
             'date' => fake()->unique()->date(),
-            'account' => fake()->numberBetween(0, 10000),
-            'legacy_upgrade' => fake()->numberBetween(0, 10000),
-            'uniqa_sds' => fake()->numberBetween(0, 10000),
-            'uniqa_dds' => fake()->numberBetween(0, 10000),
-            'finax' => fake()->numberBetween(0, 10000),
-            'trading212' => fake()->numberBetween(0, 10000),
             'is_draft' => false,
         ];
     }
@@ -32,5 +27,15 @@ class StatementFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'is_draft' => true,
         ]);
+    }
+
+    /**
+     * Record the given amount in the asset once the statement is created.
+     */
+    public function withAmount(Asset $asset, int $amount): static
+    {
+        return $this->afterCreating(function (Statement $statement) use ($asset, $amount): void {
+            $statement->assets()->attach($asset->id, ['amount' => $amount]);
+        });
     }
 }

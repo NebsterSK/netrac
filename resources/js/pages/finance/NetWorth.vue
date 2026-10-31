@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { useMediaQuery } from '@vueuse/core';
+import { useLocalStorage, useMediaQuery } from '@vueuse/core';
 import type { ScriptableLineSegmentContext, TooltipItem } from 'chart.js';
 import {
     CategoryScale,
@@ -14,10 +14,12 @@ import {
     Tooltip as ChartTooltip,
 } from 'chart.js';
 import {
+    ArrowDown,
     ArrowUp,
     CircleCheck,
     ChevronLeft,
     ChevronRight,
+    Columns3,
     EllipsisVertical,
     MessageSquare,
     Pencil,
@@ -52,6 +54,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -67,24 +74,125 @@ import { destroy, index, store, update } from '@/routes/finance/net-worth';
 import type { BreadcrumbItem } from '@/types';
 
 type Statement = App.Data.Finance.StatementData;
-
-const columns = [
-    { key: 'account', label: 'Account', color: 'rgb(156, 163, 175)' },
-    {
-        key: 'legacy_upgrade',
-        label: 'Legacy Upgrade',
-        color: 'rgb(5, 89, 210)',
-    },
-    { key: 'uniqa_sds', label: 'Uniqa SDS', color: 'rgb(0, 92, 169)' },
-    { key: 'uniqa_dds', label: 'Uniqa DDS', color: 'rgb(0, 92, 169)' },
-    { key: 'finax', label: 'Finax', color: 'rgb(203, 231, 255)' },
-    { key: 'trading212', label: 'Trading 212', color: 'rgb(0, 171, 224)' },
-] as const;
+type Asset = App.Data.Finance.AssetData;
 
 const props = defineProps<{
+    assets: Asset[];
     statements: Statement[];
     existingDates: string[];
 }>();
+
+/** Color for an asset saved without one. */
+const FALLBACK_ASSET_COLOR = '#9ca3af';
+
+function hexToRgb(hex: string): string {
+    const red = parseInt(hex.slice(1, 3), 16);
+    const green = parseInt(hex.slice(3, 5), 16);
+    const blue = parseInt(hex.slice(5, 7), 16);
+
+    return `rgb(${red}, ${green}, ${blue})`;
+}
+
+/** Left-to-right order of the asset columns (asset ids), saved per browser. */
+const assetOrder = useLocalStorage<number[]>('net-worth.asset-order', []);
+
+/** Assets in the saved order; assets missing from it (e.g. new ones) follow alphabetically. */
+const orderedAssets = computed(() => {
+    const rank = new Map(
+        assetOrder.value.map((assetId, idx) => [assetId, idx]),
+    );
+    const unranked = Number.MAX_SAFE_INTEGER;
+
+    return [...props.assets].sort(
+        (left, right) =>
+            (rank.get(left.id) ?? unranked) - (rank.get(right.id) ?? unranked),
+    );
+});
+
+/** One table column / chart series per asset, in the saved column order. */
+const columns = computed(() =>
+    orderedAssets.value.map((asset) => ({
+        id: asset.id,
+        label: asset.name,
+        color: hexToRgb(asset.color ?? FALLBACK_ASSET_COLOR),
+    })),
+);
+
+/** Move an asset column to the given index and save the new order. */
+function moveColumn(assetId: number, toIndex: number) {
+    const ids = columns.value.map((col) => col.id);
+    const fromIndex = ids.indexOf(assetId);
+
+    if (
+        fromIndex === -1 ||
+        toIndex < 0 ||
+        toIndex >= ids.length ||
+        fromIndex === toIndex
+    ) {
+        return;
+    }
+
+    ids.splice(toIndex, 0, ...ids.splice(fromIndex, 1));
+    assetOrder.value = ids;
+}
+
+function resetColumnOrder() {
+    assetOrder.value = [];
+}
+
+const draggedAssetId = ref<number | null>(null);
+const dropTargetAssetId = ref<number | null>(null);
+
+function onColumnDragStart(event: DragEvent, assetId: number) {
+    draggedAssetId.value = assetId;
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(assetId));
+    }
+}
+
+function onColumnDragOver(event: DragEvent, assetId: number) {
+    if (draggedAssetId.value === null) {
+        return;
+    }
+
+    event.preventDefault();
+    dropTargetAssetId.value = assetId;
+}
+
+function onColumnDragLeave(assetId: number) {
+    if (dropTargetAssetId.value === assetId) {
+        dropTargetAssetId.value = null;
+    }
+}
+
+function onColumnDrop(assetId: number) {
+    if (draggedAssetId.value !== null) {
+        moveColumn(
+            draggedAssetId.value,
+            columns.value.findIndex((col) => col.id === assetId),
+        );
+    }
+
+    onColumnDragEnd();
+}
+
+function onColumnDragEnd() {
+    draggedAssetId.value = null;
+    dropTargetAssetId.value = null;
+}
+
+/** An asset without a recorded amount in the statement holds nothing. */
+function amountOf(statement: Statement, assetId: number): number {
+    return statement.amounts[assetId] ?? 0;
+}
+
+function amountsOf(statement: Statement): Record<number, number> {
+    return Object.fromEntries(
+        columns.value.map((col) => [col.id, amountOf(statement, col.id)]),
+    );
+}
 
 const showDialog = ref(false);
 const editingStatement = ref<Statement | null>(null);
@@ -97,20 +205,19 @@ const shortMonths = Array.from({ length: 12 }, (_, idx) =>
 
 const form = useForm({
     date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
-    account: undefined as number | undefined,
-    legacy_upgrade: undefined as number | undefined,
-    uniqa_sds: undefined as number | undefined,
-    uniqa_dds: undefined as number | undefined,
-    finax: undefined as number | undefined,
-    trading212: undefined as number | undefined,
+    amounts: {} as Record<number, number | undefined>,
     note: '',
     is_draft: false,
 });
 
-type AmountKey = (typeof columns)[number]['key'];
-
 /** Values last prefilled into the create form, to tell untouched fields from edited ones. */
-const prefilledAmounts = ref<Partial<Record<AmountKey, number>>>({});
+const prefilledAmounts = ref<Record<number, number>>({});
+
+function amountError(assetId: number): string | undefined {
+    return (form.errors as Record<string, string | undefined>)[
+        `amounts.${assetId}`
+    ];
+}
 
 function roundUpToHundred(amount: number): number {
     return Math.ceil(amount / 100) * 100;
@@ -130,23 +237,23 @@ function prefillFromPreviousStatement() {
         )
         .at(-1);
 
-    const nextPrefill: Partial<Record<AmountKey, number>> = {};
+    const nextPrefill: Record<number, number> = {};
 
-    for (const col of columns) {
+    for (const col of columns.value) {
         const isUntouched =
-            form[col.key] === undefined ||
-            form[col.key] === prefilledAmounts.value[col.key];
+            form.amounts[col.id] === undefined ||
+            form.amounts[col.id] === prefilledAmounts.value[col.id];
 
         const amount = previous
-            ? roundUpToHundred(previous[col.key])
+            ? roundUpToHundred(amountOf(previous, col.id))
             : undefined;
 
         if (isUntouched) {
-            form[col.key] = amount;
+            form.amounts[col.id] = amount;
         }
 
         if (amount !== undefined) {
-            nextPrefill[col.key] = amount;
+            nextPrefill[col.id] = amount;
         }
     }
 
@@ -156,12 +263,7 @@ function prefillFromPreviousStatement() {
 function openCreate() {
     editingStatement.value = null;
     form.date = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
-    form.account = undefined;
-    form.legacy_upgrade = undefined;
-    form.uniqa_sds = undefined;
-    form.uniqa_dds = undefined;
-    form.finax = undefined;
-    form.trading212 = undefined;
+    form.amounts = {};
     form.note = '';
     form.is_draft = false;
     prefilledAmounts.value = {};
@@ -174,12 +276,7 @@ function openEdit(statement: Statement) {
     editingStatement.value = statement;
     const date = new Date(statement.date);
     form.date = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
-    form.account = statement.account;
-    form.legacy_upgrade = statement.legacy_upgrade;
-    form.uniqa_sds = statement.uniqa_sds;
-    form.uniqa_dds = statement.uniqa_dds;
-    form.finax = statement.finax;
-    form.trading212 = statement.trading212;
+    form.amounts = amountsOf(statement);
     form.note = statement.note ?? '';
     form.is_draft = statement.is_draft;
     pickerYear.value = date.getFullYear();
@@ -282,12 +379,7 @@ function submitForm() {
 function finalizeStatement(statement: Statement) {
     router.put(update.url(statement.id), {
         date: statement.date.slice(0, 10),
-        account: statement.account,
-        legacy_upgrade: statement.legacy_upgrade,
-        uniqa_sds: statement.uniqa_sds,
-        uniqa_dds: statement.uniqa_dds,
-        finax: statement.finax,
-        trading212: statement.trading212,
+        amounts: amountsOf(statement),
         note: statement.note,
         is_draft: false,
     });
@@ -314,13 +406,9 @@ function getYear(date: string): number {
 }
 
 function statementTotal(statement: Statement): number {
-    return (
-        statement.account +
-        statement.legacy_upgrade +
-        statement.uniqa_sds +
-        statement.uniqa_dds +
-        statement.finax +
-        statement.trading212
+    return columns.value.reduce(
+        (sum, col) => sum + amountOf(statement, col.id),
+        0,
     );
 }
 
@@ -397,36 +485,31 @@ const averageGainPercent = computed(() => {
     return percents.reduce((sum, val) => sum + val, 0) / percents.length;
 });
 
-type ColumnKey = (typeof columns)[number]['key'];
-
 const columnGainByStatementId = computed(() => {
     const result: Record<
         number,
-        Record<ColumnKey, { gain: number; percent: number | null }>
+        Record<number, { gain: number; percent: number | null }>
     > = {};
     const sorted = sortedStatements.value;
 
     for (let idx = 0; idx < sorted.length; idx++) {
-        const entry: Record<string, { gain: number; percent: number | null }> =
+        const entry: Record<number, { gain: number; percent: number | null }> =
             {};
 
-        for (const col of columns) {
+        for (const col of columns.value) {
             if (idx === 0) {
-                entry[col.key] = { gain: 0, percent: null };
+                entry[col.id] = { gain: 0, percent: null };
             } else {
-                const prev = sorted[idx - 1][col.key];
-                const curr = sorted[idx][col.key];
-                entry[col.key] = {
+                const prev = amountOf(sorted[idx - 1], col.id);
+                const curr = amountOf(sorted[idx], col.id);
+                entry[col.id] = {
                     gain: curr - prev,
                     percent: prev !== 0 ? ((curr - prev) / prev) * 100 : null,
                 };
             }
         }
 
-        result[sorted[idx].id] = entry as Record<
-            ColumnKey,
-            { gain: number; percent: number | null }
-        >;
+        result[sorted[idx].id] = entry;
     }
 
     return result;
@@ -483,7 +566,7 @@ const chartData = computed(() => {
 
     return {
         labels,
-        datasets: columns.map((col) => {
+        datasets: columns.value.map((col) => {
             const fillColor = col.color
                 .replace('rgb(', 'rgba(')
                 .replace(')', ', 0.1)');
@@ -493,7 +576,7 @@ const chartData = computed(() => {
 
             return {
                 label: col.label,
-                data: sorted.map((stmt) => stmt[col.key]),
+                data: sorted.map((stmt) => amountOf(stmt, col.id)),
                 borderColor: col.color,
                 backgroundColor: fillColor,
                 pointBackgroundColor: sorted.map((stmt) =>
@@ -617,11 +700,87 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <CardHeader>
                     <CardTitle class="leading-8">Table</CardTitle>
 
-                    <CardAction>
+                    <CardAction class="flex items-center gap-2">
+                        <Popover>
+                            <PopoverTrigger as-child>
+                                <Button
+                                    size="icon-sm"
+                                    variant="outline"
+                                    class="cursor-pointer"
+                                    aria-label="Column order"
+                                >
+                                    <Columns3 class="size-3" />
+                                </Button>
+                            </PopoverTrigger>
+
+                            <PopoverContent align="end" class="w-64 p-2">
+                                <p
+                                    class="px-2 pt-1 pb-2 text-xs text-muted-foreground"
+                                >
+                                    Column order. You can also drag the column
+                                    headers.
+                                </p>
+
+                                <ul>
+                                    <li
+                                        v-for="(col, idx) in columns"
+                                        :key="col.id"
+                                        class="flex items-center gap-2 rounded-md py-0.5 pl-2 text-sm"
+                                    >
+                                        <span
+                                            class="size-2.5 shrink-0 rounded-full"
+                                            :style="{
+                                                backgroundColor: col.color,
+                                            }"
+                                        />
+
+                                        <span class="flex-1 truncate">
+                                            {{ col.label }}
+                                        </span>
+
+                                        <Button
+                                            size="icon-sm"
+                                            variant="ghost"
+                                            class="cursor-pointer"
+                                            :aria-label="`Move ${col.label} earlier`"
+                                            :disabled="idx === 0"
+                                            @click="moveColumn(col.id, idx - 1)"
+                                        >
+                                            <ArrowUp class="size-4" />
+                                        </Button>
+
+                                        <Button
+                                            size="icon-sm"
+                                            variant="ghost"
+                                            class="cursor-pointer"
+                                            :aria-label="`Move ${col.label} later`"
+                                            :disabled="
+                                                idx === columns.length - 1
+                                            "
+                                            @click="moveColumn(col.id, idx + 1)"
+                                        >
+                                            <ArrowDown class="size-4" />
+                                        </Button>
+                                    </li>
+                                </ul>
+
+                                <Button
+                                    v-if="assetOrder.length > 0"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="mt-1 w-full cursor-pointer"
+                                    @click="resetColumnOrder()"
+                                >
+                                    Reset to alphabetical
+                                </Button>
+                            </PopoverContent>
+                        </Popover>
+
                         <Button
                             size="icon-sm"
                             variant="outline"
                             class="cursor-pointer"
+                            aria-label="Add statement"
                             @click="openCreate()"
                         >
                             <Plus class="size-3" />
@@ -692,8 +851,26 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                                     <th
                                         v-for="col in columns"
-                                        :key="col.key"
-                                        class="px-2 py-2 text-right"
+                                        :key="col.id"
+                                        draggable="true"
+                                        class="cursor-grab px-2 py-2 text-right transition-colors select-none active:cursor-grabbing"
+                                        :class="{
+                                            'opacity-40':
+                                                draggedAssetId === col.id,
+                                            'bg-muted text-foreground':
+                                                dropTargetAssetId === col.id &&
+                                                draggedAssetId !== col.id,
+                                        }"
+                                        title="Drag to reorder"
+                                        @dragstart="
+                                            onColumnDragStart($event, col.id)
+                                        "
+                                        @dragover="
+                                            onColumnDragOver($event, col.id)
+                                        "
+                                        @dragleave="onColumnDragLeave(col.id)"
+                                        @drop.prevent="onColumnDrop(col.id)"
+                                        @dragend="onColumnDragEnd()"
                                     >
                                         {{ col.label }}
                                     </th>
@@ -830,12 +1007,12 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                                         <td
                                             v-for="col in columns"
-                                            :key="col.key"
+                                            :key="col.id"
                                             class="px-2 py-3 text-right font-mono"
                                             :class="
                                                 columnGainByStatementId[
                                                     statement.id
-                                                ][col.key].gain < 0
+                                                ][col.id].gain < 0
                                                     ? 'text-red-600 dark:text-red-400'
                                                     : ''
                                             "
@@ -844,7 +1021,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                 v-if="
                                                     columnGainByStatementId[
                                                         statement.id
-                                                    ][col.key].percent !== null
+                                                    ][col.id].percent !== null
                                                 "
                                             >
                                                 <Tooltip>
@@ -854,9 +1031,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                         >
                                                             {{
                                                                 formatAmount(
-                                                                    statement[
-                                                                        col.key
-                                                                    ],
+                                                                    amountOf(
+                                                                        statement,
+                                                                        col.id,
+                                                                    ),
                                                                 )
                                                             }}
                                                         </span>
@@ -867,7 +1045,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                             :class="
                                                                 columnGainByStatementId[
                                                                     statement.id
-                                                                ][col.key]
+                                                                ][col.id]
                                                                     .gain >= 0
                                                                     ? 'text-green-400 dark:text-green-600'
                                                                     : 'text-red-400 dark:text-red-600'
@@ -876,7 +1054,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                             {{
                                                                 columnGainByStatementId[
                                                                     statement.id
-                                                                ][col.key]
+                                                                ][col.id]
                                                                     .gain >= 0
                                                                     ? '+'
                                                                     : '−'
@@ -888,7 +1066,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                                                 .id
                                                                         ][
                                                                             col
-                                                                                .key
+                                                                                .id
                                                                         ].gain,
                                                                     ),
                                                                 )
@@ -896,7 +1074,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                             ({{
                                                                 columnGainByStatementId[
                                                                     statement.id
-                                                                ][col.key]
+                                                                ][col.id]
                                                                     .percent! >=
                                                                 0
                                                                     ? '+'
@@ -906,7 +1084,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                                                     columnGainByStatementId[
                                                                         statement
                                                                             .id
-                                                                    ][col.key]
+                                                                    ][col.id]
                                                                         .percent!,
                                                                 ).toLocaleString(
                                                                     'fr-FR',
@@ -924,7 +1102,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                                             <template v-else>
                                                 {{
                                                     formatAmount(
-                                                        statement[col.key],
+                                                        amountOf(
+                                                            statement,
+                                                            col.id,
+                                                        ),
                                                     )
                                                 }}
                                             </template>
@@ -1157,16 +1338,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-4">
                         <div
                             v-for="col in columns"
-                            :key="col.key"
+                            :key="col.id"
                             class="space-y-2"
                         >
-                            <Label :for="`stmt-${col.key}`">{{
+                            <Label :for="`stmt-asset-${col.id}`">{{
                                 col.label
                             }}</Label>
 
                             <Input
-                                :id="`stmt-${col.key}`"
-                                v-model="form[col.key]"
+                                :id="`stmt-asset-${col.id}`"
+                                v-model="form.amounts[col.id]"
                                 type="number"
                                 min="0"
                                 inputmode="numeric"
@@ -1174,7 +1355,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 :disabled="form.processing"
                             />
 
-                            <InputError :message="form.errors[col.key]" />
+                            <InputError :message="amountError(col.id)" />
                         </div>
                     </div>
 

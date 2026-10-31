@@ -4,43 +4,35 @@ namespace App\Models\Finance;
 
 use Database\Factories\Finance\StatementFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property Carbon $date
- * @property int $account
- * @property int $legacy_upgrade
- * @property int $uniqa_sds
- * @property int $uniqa_dds
- * @property int $finax
- * @property int $trading212
  * @property string|null $note
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property bool $is_draft
+ * @property-read Collection<int, Asset> $assets
+ * @property-read int|null $assets_count
  *
  * @method static \Database\Factories\Finance\StatementFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement query()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereAccount($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereFinax($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereIsDraft($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereLegacyUpgrade($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereTrading212($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUniqaDds($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUniqaSds($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Statement whereUpdatedAt($value)
  *
  * @mixin \Eloquent
  */
-#[Fillable(['date', 'account', 'legacy_upgrade', 'uniqa_sds', 'uniqa_dds', 'finax', 'trading212', 'note', 'is_draft'])]
+#[Fillable(['date', 'note', 'is_draft'])]
 class Statement extends Model
 {
     /** @use HasFactory<StatementFactory> */
@@ -50,13 +42,35 @@ class Statement extends Model
     {
         return [
             'date' => 'date',
-            'account' => 'integer',
-            'legacy_upgrade' => 'integer',
-            'uniqa_sds' => 'integer',
-            'uniqa_dds' => 'integer',
-            'finax' => 'integer',
-            'trading212' => 'integer',
             'is_draft' => 'boolean',
         ];
+    }
+
+    /**
+     * @return BelongsToMany<Asset, $this, AssetStatement>
+     */
+    public function assets(): BelongsToMany
+    {
+        return $this->belongsToMany(Asset::class)->using(AssetStatement::class)->withPivot('amount')->withTimestamps();
+    }
+
+    /**
+     * Amount held in each asset, keyed by asset id.
+     *
+     * @return array<int, int>
+     */
+    public function amounts(): array
+    {
+        return $this->assets
+            ->mapWithKeys(fn (Asset $asset): array => [$asset->id => (int) $asset->pivot->amount])
+            ->all();
+    }
+
+    /**
+     * Amount held in the given asset; an asset without a recorded amount holds nothing.
+     */
+    public function amountIn(Asset $asset): int
+    {
+        return (int) $this->assets->firstWhere('id', $asset->id)?->pivot->amount;
     }
 }

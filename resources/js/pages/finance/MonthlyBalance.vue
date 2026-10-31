@@ -23,12 +23,7 @@ import { ArrowUp, MessageSquare } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Bar } from 'vue-chartjs';
 import { Badge } from '@/components/ui/badge';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Tooltip,
     TooltipContent,

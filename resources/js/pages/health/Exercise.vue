@@ -389,7 +389,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4">
+                                <th
+                                    class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4"
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -404,7 +406,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </button>
                                 </th>
 
-                                <th class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4">
+                                <th
+                                    class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4"
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
@@ -463,11 +467,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                                     </div>
                                 </td>
 
-                                <td class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4">
+                                <td
+                                    class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4"
+                                >
                                     {{ formatDate(exercise.created_at) }}
                                 </td>
 
-                                <td class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4">
+                                <td
+                                    class="hidden px-2 py-3 text-muted-foreground sm:table-cell sm:px-4"
+                                >
                                     {{ formatDate(exercise.updated_at) }}
                                 </td>
 
