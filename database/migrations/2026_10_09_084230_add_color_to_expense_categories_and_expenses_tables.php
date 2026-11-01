@@ -19,18 +19,4 @@ return new class extends Migration
             $table->string('color', 7)->nullable()->after('name');
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('expense_categories', function (Blueprint $table) {
-            $table->dropColumn('color');
-        });
-
-        Schema::table('expenses', function (Blueprint $table) {
-            $table->dropColumn('color');
-        });
-    }
 };

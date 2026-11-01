@@ -26,11 +26,4 @@ return new class extends Migration
             DB::table('exercise_categories')->where('name', $name)->update(['priority' => $priority]);
         }
     }
-
-    public function down(): void
-    {
-        DB::table('exercise_categories')
-            ->whereIn('name', array_keys($this->priorities))
-            ->update(['priority' => 1]);
-    }
 };

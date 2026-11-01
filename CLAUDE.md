@@ -29,6 +29,7 @@ See `README.md` for project overview, stack, setup, and architecture.
 - Don't reference enums, models, or app classes in migrations.
 - Hardcode seeded values; use `DB::table(...)`, not Eloquent models.
 - Every foreign key uses `cascadeOnUpdate()->cascadeOnDelete()` (exception: nullable 'pointer' columns like `users.finance_owner_id` use `nullOnDelete()`).
+- Forward-only: don't write `down()` methods. Fix a bad migration with a new migration, not a rollback.
 
 ### Index / listing pages
 

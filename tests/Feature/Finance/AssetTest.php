@@ -3,8 +3,6 @@
 use App\Models\Finance\Asset;
 use App\Models\Finance\Statement;
 use App\Models\User;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 describe('access control', function () {
@@ -21,32 +19,6 @@ describe('access control', function () {
                 ->component('finance/Asset')
                 ->has('assets'));
     });
-});
-
-it('turns the former hardcoded balance columns into assets owned by the first user', function () {
-    Artisan::call('migrate:rollback', ['--step' => 4]);
-
-    $ownerId = DB::table('users')->insertGetId(['name' => 'Lukas', 'email' => 'first@example.com', 'password' => 'secret']);
-    DB::table('users')->insert(['name' => 'Lucka', 'email' => 'second@example.com', 'password' => 'secret']);
-    DB::table('statements')->insert(['date' => '2026-01-01', 'account' => 1200, 'legacy_upgrade' => 0, 'uniqa_sds' => 0, 'uniqa_dds' => 0, 'finax' => 300, 'trading212' => 0]);
-
-    try {
-        Artisan::call('migrate');
-
-        expect(Asset::orderBy('id')->get(['user_id', 'name', 'color', 'tracks_monthly_balance'])->toArray())->toBe([
-            ['user_id' => $ownerId, 'name' => 'Account', 'color' => '#9ca3af', 'tracks_monthly_balance' => true],
-            ['user_id' => $ownerId, 'name' => 'Legacy Upgrade', 'color' => '#0559d2', 'tracks_monthly_balance' => false],
-            ['user_id' => $ownerId, 'name' => 'Uniqa SDS', 'color' => '#005ca9', 'tracks_monthly_balance' => false],
-            ['user_id' => $ownerId, 'name' => 'Uniqa DDS', 'color' => '#005ca9', 'tracks_monthly_balance' => false],
-            ['user_id' => $ownerId, 'name' => 'Finax', 'color' => '#cbe7ff', 'tracks_monthly_balance' => false],
-            ['user_id' => $ownerId, 'name' => 'Trading 212', 'color' => '#00abe0', 'tracks_monthly_balance' => false],
-        ])
-            ->and(Statement::sole()->user_id)->toBe($ownerId)
-            ->and(Statement::sole()->assets()->where('name', 'Finax')->sole()->pivot->amount)->toBe(300);
-    } finally {
-        Artisan::call('migrate');
-        DB::table('users')->whereIn('email', ['first@example.com', 'second@example.com'])->delete();
-    }
 });
 
 it('lists assets by owner then name with statement counts', function () {

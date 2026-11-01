@@ -34,19 +34,4 @@ return new class extends Migration
             });
         }
     }
-
-    /**
-     * Reverse the migrations.
-     *
-     * Restores delete-only cascading.
-     */
-    public function down(): void
-    {
-        foreach ($this->foreignKeys as [$tableName, $column, $referenced]) {
-            Schema::table($tableName, function (Blueprint $table) use ($column, $referenced) {
-                $table->dropForeign([$column]);
-                $table->foreign($column)->references('id')->on($referenced)->cascadeOnDelete();
-            });
-        }
-    }
 };

@@ -26,9 +26,4 @@ return new class extends Migration
 
         DB::table('categories')->insertOrIgnore($rows);
     }
-
-    public function down(): void
-    {
-        DB::table('categories')->whereIn('name', $this->categories)->delete();
-    }
 };

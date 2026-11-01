@@ -39,6 +39,8 @@ function verifiedUser(array $attributes = []): User
 
 /**
  * A statement of the owner's that records the amount in the asset.
+ *
+ * @param  array<string, mixed>  $attributes
  */
 function balanceStatement(User $owner, Asset $asset, string $date, int $amount, array $attributes = []): Statement
 {

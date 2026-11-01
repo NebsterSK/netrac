@@ -30,14 +30,4 @@ return new class extends Migration
                 ->update(['note' => $balance->comment]);
         }
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('statements', function (Blueprint $table) {
-            $table->dropColumn('note');
-        });
-    }
 };

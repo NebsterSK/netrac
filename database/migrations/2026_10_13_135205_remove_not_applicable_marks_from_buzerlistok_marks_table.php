@@ -18,14 +18,4 @@ return new class extends Migration
             $table->dropColumn('comment');
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('buzerlistok_marks', function (Blueprint $table) {
-            $table->text('comment')->nullable()->after('status');
-        });
-    }
 };

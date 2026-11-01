@@ -1,8 +1,8 @@
 # Netrac
 
-A personal, single-user dashboard for tracking finances and workouts — built with Laravel, Inertia, and Vue.
+A personal dashboard for tracking finances and workouts, shared by two people (Lukas and Lucka) — built with Laravel, Inertia, and Vue. There are no roles or permissions: both see and edit everything.
 
-- **Finance:** monthly balances and net-worth statements with charts.
+- **Finance:** monthly balances, net-worth statements, assets and expenses with charts. Assets, expenses and statements belong to one person; a global All / per-person switch filters the finance pages.
 - **Health:** exercise categories (priority board), exercises, and workout sessions.
 
 ## Stack
@@ -23,7 +23,7 @@ Served by **Laravel Herd** at `https://netrac.test` (project lives at `E:\webs\n
 composer install
 npm install
 
-# database (seed includes Finance + Health demo data)
+# database (seed creates lukas@example.com + lucka@example.com with Finance + Health demo data)
 php artisan migrate --seed
 composer resetup          # full reinstall + npm install + migrate:fresh --seed
 
@@ -35,6 +35,9 @@ npm run build             # production build
 php artisan typescript:transform                 # regenerate resources/js/generated/generated.d.ts
 php artisan wayfinder:generate --with-form       # regenerate @/routes + @/actions (keep --with-form)
 composer models                                  # refresh ide-helper model docblocks
+
+# accounts — registration is off
+php artisan user:create Lucka lucka@example.com --color=#ec4899   # prompts for a password
 
 # quality (run manually)
 composer pint
@@ -73,7 +76,7 @@ Index pages use `spatie/laravel-query-builder` for search, filtering, and sortin
 
 ### Migrations
 
-Reference data is seeded in self-contained migrations using `DB::table(...)` with hardcoded values (no enum or model references), so each migration stays an immutable, dependency-free snapshot.
+Reference data is seeded in self-contained migrations using `DB::table(...)` with hardcoded values (no enum or model references), so each migration stays an immutable, dependency-free snapshot. Migrations are forward-only: no `down()` methods; fix mistakes with a new migration.
 
 ## Conventions
 

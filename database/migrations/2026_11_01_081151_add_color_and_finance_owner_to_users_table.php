@@ -17,15 +17,4 @@ return new class extends Migration
                 ->constrained('users')->cascadeOnUpdate()->nullOnDelete();
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('finance_owner_id');
-            $table->dropColumn('color');
-        });
-    }
 };
