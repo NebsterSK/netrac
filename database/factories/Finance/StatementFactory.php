@@ -4,6 +4,7 @@ namespace Database\Factories\Finance;
 
 use App\Models\Finance\Asset;
 use App\Models\Finance\Statement;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,7 +18,8 @@ class StatementFactory extends Factory
     public function definition(): array
     {
         return [
-            'date' => fake()->unique()->date(),
+            'user_id' => User::factory(),
+            'date' => fake()->unique()->date('Y-m-01'),
             'is_draft' => false,
         ];
     }

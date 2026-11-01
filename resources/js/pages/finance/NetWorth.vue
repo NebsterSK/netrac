@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { useLocalStorage, useMediaQuery } from '@vueuse/core';
 import type { ScriptableLineSegmentContext, TooltipItem } from 'chart.js';
 import {
@@ -16,19 +16,19 @@ import {
 import {
     ArrowDown,
     ArrowUp,
-    CircleCheck,
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
     Columns3,
-    EllipsisVertical,
     MessageSquare,
-    Pencil,
     Plus,
-    Trash2,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { Line } from 'vue-chartjs';
 import InputError from '@/components/InputError.vue';
+import OwnerBadge from '@/components/OwnerBadge.vue';
+import OwnerSelect from '@/components/OwnerSelect.vue';
+import StatementActionsMenu from '@/components/StatementActionsMenu.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,12 +46,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -68,19 +62,28 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useAppearance } from '@/composables/useAppearance';
+import { useOwners } from '@/composables/useOwners';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
+import { index as assetsIndex } from '@/routes/finance/assets';
 import { destroy, index, store, update } from '@/routes/finance/net-worth';
 import type { BreadcrumbItem } from '@/types';
 
 type Statement = App.Data.Finance.StatementData;
 type Asset = App.Data.Finance.AssetData;
+type Month = App.Data.Finance.NetWorthMonthData;
+type Owner = App.Data.Finance.OwnerData;
 
 const props = defineProps<{
     assets: Asset[];
-    statements: Statement[];
-    existingDates: string[];
+    months: Month[];
+    existingMonths: Record<number, string[]>;
 }>();
+
+const { ownerFilter, defaultOwnerId, ownerById } = useOwners();
+
+/** Under All, months combine every owner's statement and expand into them. */
+const isAllOwners = computed(() => ownerFilter.value === null);
 
 /** Color for an asset saved without one. */
 const FALLBACK_ASSET_COLOR = '#9ca3af';
@@ -113,12 +116,31 @@ const orderedAssets = computed(() => {
 const columns = computed(() =>
     orderedAssets.value.map((asset) => ({
         id: asset.id,
+        ownerId: asset.user_id,
+        owner: ownerById(asset.user_id),
         label: asset.name,
         color: hexToRgb(asset.color ?? FALLBACK_ASSET_COLOR),
     })),
 );
 
-/** Move an asset column to the given index and save the new order. */
+type Column = (typeof columns.value)[number];
+
+/** Asset names can repeat across owners; those get the owner's name appended in the chart. */
+function chartLabel(col: Column): string {
+    const isAmbiguous = columns.value.some(
+        (other) => other.id !== col.id && other.label === col.label,
+    );
+
+    return isAmbiguous && col.owner
+        ? `${col.label} (${col.owner.name})`
+        : col.label;
+}
+
+/**
+ * Move an asset column to the given index and save the new order. Only the
+ * visible (filtered) columns are reordered; assets hidden by the owner filter
+ * keep their saved positions.
+ */
 function moveColumn(assetId: number, toIndex: number) {
     const ids = columns.value.map((col) => col.id);
     const fromIndex = ids.indexOf(assetId);
@@ -133,7 +155,17 @@ function moveColumn(assetId: number, toIndex: number) {
     }
 
     ids.splice(toIndex, 0, ...ids.splice(fromIndex, 1));
-    assetOrder.value = ids;
+
+    const visibleIds = new Set(ids);
+    const savedIds = [
+        ...assetOrder.value,
+        ...ids.filter((id) => !assetOrder.value.includes(id)),
+    ];
+    const reorderedVisible = ids[Symbol.iterator]();
+
+    assetOrder.value = savedIds.map((id) =>
+        visibleIds.has(id) ? reorderedVisible.next().value! : id,
+    );
 }
 
 function resetColumnOrder() {
@@ -183,15 +215,201 @@ function onColumnDragEnd() {
     dropTargetAssetId.value = null;
 }
 
-/** An asset without a recorded amount in the statement holds nothing. */
-function amountOf(statement: Statement, assetId: number): number {
-    return statement.amounts[assetId] ?? 0;
+/** Months oldest first. */
+const sortedMonths = computed(() => [...props.months].reverse());
+
+/** Every loaded statement, oldest first. */
+const allStatements = computed(() =>
+    sortedMonths.value.flatMap((month) => month.statements),
+);
+
+/** Whether the asset's owner has a statement in the month. */
+function hasOwnerStatement(month: Month, col: Column): boolean {
+    return month.statements.some(
+        (statement) => statement.user_id === col.ownerId,
+    );
 }
 
+/** An asset without a recorded amount holds nothing. */
+function amountOf(amounts: Record<number, number>, assetId: number): number {
+    return amounts[assetId] ?? 0;
+}
+
+/** A statement's amounts for its owner's assets, as sent back to the server. */
 function amountsOf(statement: Statement): Record<number, number> {
     return Object.fromEntries(
-        columns.value.map((col) => [col.id, amountOf(statement, col.id)]),
+        columns.value
+            .filter((col) => col.ownerId === statement.user_id)
+            .map((col) => [col.id, amountOf(statement.amounts, col.id)]),
     );
+}
+
+function statementTotal(statement: Statement): number {
+    return Object.values(statement.amounts).reduce(
+        (sum, amount) => sum + amount,
+        0,
+    );
+}
+
+/**
+ * Owners missing from each incomplete month: owners with a statement in an
+ * earlier month but none in this one.
+ */
+const missingOwnersByMonth = computed(() => {
+    const seenOwnerIds = new Set<number>();
+    const result: Record<string, Owner[]> = {};
+
+    for (const month of sortedMonths.value) {
+        const monthOwnerIds = new Set(
+            month.statements.map((statement) => statement.user_id),
+        );
+
+        result[month.month] = [...seenOwnerIds]
+            .filter((ownerId) => !monthOwnerIds.has(ownerId))
+            .map((ownerId) => ownerById(ownerId))
+            .filter((owner): owner is Owner => owner !== null);
+
+        monthOwnerIds.forEach((ownerId) => seenOwnerIds.add(ownerId));
+    }
+
+    return result;
+});
+
+function incompleteLabel(month: Month): string {
+    const names = (missingOwnersByMonth.value[month.month] ?? []).map(
+        (owner) => owner.name,
+    );
+
+    return names.length > 0 ? `Waiting for ${names.join(', ')}` : 'Incomplete';
+}
+
+/** Months counted in the averages: final and with every required owner's statement. */
+const settledMonths = computed(() =>
+    sortedMonths.value.filter((month) => !month.is_draft && month.is_complete),
+);
+
+const averageGain = computed(() => {
+    const gains = settledMonths.value
+        .map((month) => month.gain)
+        .filter((val): val is number => val !== null);
+
+    if (gains.length === 0) {
+        return 0;
+    }
+
+    return Math.round(gains.reduce((sum, val) => sum + val, 0) / gains.length);
+});
+
+const averageGainPercent = computed(() => {
+    const percents = settledMonths.value
+        .map((month) => month.gain_percent)
+        .filter((val): val is number => val !== null);
+
+    if (percents.length === 0) {
+        return 0;
+    }
+
+    return percents.reduce((sum, val) => sum + val, 0) / percents.length;
+});
+
+type ColumnGain = { gain: number; percent: number | null } | null;
+
+/** Per-asset change against the previous month; null when either month lacks the owner's statement. */
+const columnGainByMonth = computed(() => {
+    const result: Record<string, Record<number, ColumnGain>> = {};
+    const sorted = sortedMonths.value;
+
+    for (let idx = 0; idx < sorted.length; idx++) {
+        const entry: Record<number, ColumnGain> = {};
+
+        for (const col of columns.value) {
+            const previous = sorted[idx - 1];
+
+            if (
+                !previous ||
+                !hasOwnerStatement(previous, col) ||
+                !hasOwnerStatement(sorted[idx], col)
+            ) {
+                entry[col.id] = null;
+
+                continue;
+            }
+
+            const prev = amountOf(previous.amounts, col.id);
+            const curr = amountOf(sorted[idx].amounts, col.id);
+
+            entry[col.id] = {
+                gain: curr - prev,
+                percent: prev !== 0 ? ((curr - prev) / prev) * 100 : null,
+            };
+        }
+
+        result[sorted[idx].month] = entry;
+    }
+
+    return result;
+});
+
+const groupedByYear = computed(() => {
+    const groups = new Map<string, Month[]>();
+
+    for (const month of props.months) {
+        const year = month.month.slice(0, 4);
+
+        if (!groups.has(year)) {
+            groups.set(year, []);
+        }
+
+        groups.get(year)!.push(month);
+    }
+
+    return [...groups.entries()];
+});
+
+const expandedMonths = ref(new Set<string>());
+
+function toggleMonth(month: string) {
+    if (expandedMonths.value.has(month)) {
+        expandedMonths.value.delete(month);
+    } else {
+        expandedMonths.value.add(month);
+    }
+}
+
+function formatMonth(month: string): string {
+    const [year, monthNumber] = month.split('-').map(Number);
+
+    return new Date(year, monthNumber - 1).toLocaleDateString('en-US', {
+        month: 'long',
+    });
+}
+
+function formatAmount(amount: number): string {
+    return amount.toLocaleString('fr-FR');
+}
+
+function formatSignedAmount(amount: number): string {
+    return `${amount >= 0 ? '+' : '−'}${formatAmount(Math.abs(amount))}`;
+}
+
+function formatSignedPercent(percent: number): string {
+    return `${percent >= 0 ? '+' : '−'}${Math.abs(percent).toLocaleString(
+        'fr-FR',
+        {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+        },
+    )}%`;
+}
+
+function gainClass(value: number | null): string {
+    if (value === null) {
+        return 'text-muted-foreground';
+    }
+
+    return value >= 0
+        ? 'text-green-600 dark:text-green-400'
+        : 'text-red-600 dark:text-red-400';
 }
 
 const showDialog = ref(false);
@@ -203,12 +421,29 @@ const shortMonths = Array.from({ length: 12 }, (_, idx) =>
     new Date(2000, idx).toLocaleDateString('en-US', { month: 'short' }),
 );
 
+function currentMonthDate(): string {
+    return `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
+}
+
 const form = useForm({
-    date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
+    user_id: null as number | null,
+    date: currentMonthDate(),
     amounts: {} as Record<number, number | undefined>,
     note: '',
     is_draft: false,
 });
+
+/** The asset inputs: the form owner's assets only. */
+const formColumns = computed(() =>
+    columns.value.filter((col) => col.ownerId === form.user_id),
+);
+
+/** The form owner's statements, oldest first. */
+const ownerStatements = computed(() =>
+    allStatements.value.filter(
+        (statement) => statement.user_id === form.user_id,
+    ),
+);
 
 /** Values last prefilled into the create form, to tell untouched fields from edited ones. */
 const prefilledAmounts = ref<Record<number, number>>({});
@@ -224,13 +459,13 @@ function roundUpToHundred(amount: number): number {
 }
 
 /**
- * Prefill the create form with the statement preceding the selected month,
- * rounded up to the nearest hundred. Fields the user already changed are kept.
+ * Prefill the create form with the owner's statement preceding the selected
+ * month, rounded up to the nearest hundred. Fields the user already changed are kept.
  */
 function prefillFromPreviousStatement() {
     const selectedKey = form.date ? monthKey(form.date) : null;
 
-    const previous = sortedStatements.value
+    const previous = ownerStatements.value
         .filter(
             (statement) =>
                 selectedKey === null || monthKey(statement.date) < selectedKey,
@@ -239,13 +474,13 @@ function prefillFromPreviousStatement() {
 
     const nextPrefill: Record<number, number> = {};
 
-    for (const col of columns.value) {
+    for (const col of formColumns.value) {
         const isUntouched =
             form.amounts[col.id] === undefined ||
             form.amounts[col.id] === prefilledAmounts.value[col.id];
 
         const amount = previous
-            ? roundUpToHundred(amountOf(previous, col.id))
+            ? roundUpToHundred(amountOf(previous.amounts, col.id))
             : undefined;
 
         if (isUntouched) {
@@ -260,20 +495,50 @@ function prefillFromPreviousStatement() {
     prefilledAmounts.value = nextPrefill;
 }
 
+/** Reset the owner-specific parts of the create form for a newly picked owner. */
+function onOwnerChange() {
+    if (isEditing.value) {
+        return;
+    }
+
+    form.amounts = {};
+    prefilledAmounts.value = {};
+
+    if (
+        !canBeDraft.value ||
+        (form.date && isMonthDisabled(selectedMonth.value, selectedYear.value))
+    ) {
+        form.is_draft = false;
+    }
+
+    if (form.date && isMonthDisabled(selectedMonth.value, selectedYear.value)) {
+        form.date = '';
+    }
+
+    prefillFromPreviousStatement();
+}
+
+function selectOwner(ownerId: number | null) {
+    form.user_id = ownerId;
+    onOwnerChange();
+}
+
 function openCreate() {
     editingStatement.value = null;
-    form.date = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
-    form.amounts = {};
+    form.clearErrors();
+    form.user_id = defaultOwnerId.value;
+    form.date = currentMonthDate();
     form.note = '';
     form.is_draft = false;
-    prefilledAmounts.value = {};
-    prefillFromPreviousStatement();
     pickerYear.value = new Date().getFullYear();
+    onOwnerChange();
     showDialog.value = true;
 }
 
 function openEdit(statement: Statement) {
     editingStatement.value = statement;
+    form.clearErrors();
+    form.user_id = statement.user_id;
     const date = new Date(statement.date);
     form.date = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
     form.amounts = amountsOf(statement);
@@ -286,13 +551,14 @@ function openEdit(statement: Statement) {
 const selectedYear = computed(() => parseInt(form.date.split('-')[0]));
 const selectedMonth = computed(() => parseInt(form.date.split('-')[1]));
 
+/** The form owner's draft; drafts are limited to one per owner. */
 const draftStatement = computed(
-    () => props.statements.find((statement) => statement.is_draft) ?? null,
+    () => ownerStatements.value.find((statement) => statement.is_draft) ?? null,
 );
 
 const latestRealStatement = computed(
     () =>
-        sortedStatements.value
+        ownerStatements.value
             .filter((statement) => !statement.is_draft)
             .at(-1) ?? null,
 );
@@ -318,10 +584,15 @@ function monthKey(date: string): string {
     return date.slice(0, 7);
 }
 
+/** Months the form owner already has a statement for. */
+const ownerExistingMonths = computed(() =>
+    form.user_id === null ? [] : (props.existingMonths[form.user_id] ?? []),
+);
+
 function isMonthDisabled(month: number, year = pickerYear.value): boolean {
     const key = `${year}-${String(month).padStart(2, '0')}`;
 
-    if (props.existingDates.some((date) => date.startsWith(key))) {
+    if (ownerExistingMonths.value.includes(key)) {
         return true;
     }
 
@@ -343,6 +614,7 @@ function toggleDraft(checked: boolean | 'indeterminate') {
 
     if (
         !isEditing.value &&
+        form.date &&
         isMonthDisabled(selectedMonth.value, selectedYear.value)
     ) {
         form.date = '';
@@ -363,9 +635,14 @@ function submitForm() {
         : store.url();
 
     const method = isEditing.value ? 'put' : 'post';
+    const assetIds = formColumns.value.map((col) => col.id);
 
-    form.transform((data) => ({
+    form.transform(({ user_id: ownerId, ...data }) => ({
         ...data,
+        ...(isEditing.value ? {} : { user_id: ownerId }),
+        amounts: Object.fromEntries(
+            assetIds.map((assetId) => [assetId, data.amounts[assetId]]),
+        ),
         note: data.note.trim() || null,
     }))[method](url, {
         onSuccess: () => {
@@ -393,145 +670,6 @@ function deleteStatement(statement: Statement) {
     router.delete(destroy.url(statement.id));
 }
 
-function formatMonth(date: string): string {
-    return new Date(date).toLocaleDateString('en-US', { month: 'long' });
-}
-
-function formatAmount(amount: number): string {
-    return amount.toLocaleString('fr-FR');
-}
-
-function getYear(date: string): number {
-    return new Date(date).getFullYear();
-}
-
-function statementTotal(statement: Statement): number {
-    return columns.value.reduce(
-        (sum, col) => sum + amountOf(statement, col.id),
-        0,
-    );
-}
-
-const sortedStatements = computed(() =>
-    [...props.statements].sort(
-        (stmtA, stmtB) =>
-            new Date(stmtA.date).getTime() - new Date(stmtB.date).getTime(),
-    ),
-);
-
-const realStatementIds = computed(() =>
-    sortedStatements.value
-        .filter((statement) => !statement.is_draft)
-        .map((statement) => statement.id),
-);
-
-const gainByStatementId = computed(() => {
-    const gains: Record<number, number | null> = {};
-    const sorted = sortedStatements.value;
-
-    for (let idx = 0; idx < sorted.length; idx++) {
-        if (idx === 0) {
-            gains[sorted[idx].id] = null;
-        } else {
-            gains[sorted[idx].id] =
-                statementTotal(sorted[idx]) - statementTotal(sorted[idx - 1]);
-        }
-    }
-
-    return gains;
-});
-
-const gainPercentByStatementId = computed(() => {
-    const percents: Record<number, number | null> = {};
-    const sorted = sortedStatements.value;
-
-    for (let idx = 0; idx < sorted.length; idx++) {
-        if (idx === 0) {
-            percents[sorted[idx].id] = null;
-        } else {
-            const prevTotal = statementTotal(sorted[idx - 1]);
-            percents[sorted[idx].id] =
-                prevTotal !== 0
-                    ? ((statementTotal(sorted[idx]) - prevTotal) / prevTotal) *
-                      100
-                    : null;
-        }
-    }
-
-    return percents;
-});
-
-const averageGain = computed(() => {
-    const gains = realStatementIds.value
-        .map((id) => gainByStatementId.value[id])
-        .filter((val): val is number => val !== null);
-
-    if (gains.length === 0) {
-        return 0;
-    }
-
-    return Math.round(gains.reduce((sum, val) => sum + val, 0) / gains.length);
-});
-
-const averageGainPercent = computed(() => {
-    const percents = realStatementIds.value
-        .map((id) => gainPercentByStatementId.value[id])
-        .filter((val): val is number => val !== null);
-
-    if (percents.length === 0) {
-        return 0;
-    }
-
-    return percents.reduce((sum, val) => sum + val, 0) / percents.length;
-});
-
-const columnGainByStatementId = computed(() => {
-    const result: Record<
-        number,
-        Record<number, { gain: number; percent: number | null }>
-    > = {};
-    const sorted = sortedStatements.value;
-
-    for (let idx = 0; idx < sorted.length; idx++) {
-        const entry: Record<number, { gain: number; percent: number | null }> =
-            {};
-
-        for (const col of columns.value) {
-            if (idx === 0) {
-                entry[col.id] = { gain: 0, percent: null };
-            } else {
-                const prev = amountOf(sorted[idx - 1], col.id);
-                const curr = amountOf(sorted[idx], col.id);
-                entry[col.id] = {
-                    gain: curr - prev,
-                    percent: prev !== 0 ? ((curr - prev) / prev) * 100 : null,
-                };
-            }
-        }
-
-        result[sorted[idx].id] = entry;
-    }
-
-    return result;
-});
-
-const groupedByYear = computed(() => {
-    const groups: Record<number, Statement[]> = {};
-
-    for (const statement of sortedStatements.value) {
-        const year = getYear(statement.date);
-        (groups[year] ??= []).push(statement);
-    }
-
-    for (const year in groups) {
-        groups[year].reverse();
-    }
-
-    return Object.entries(groups).sort(
-        ([yearA], [yearB]) => Number(yearB) - Number(yearA),
-    );
-});
-
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -546,10 +684,16 @@ ChartJS.register(
 /** Phones get thinner lines and smaller points so dense series stay readable. */
 const isPhone = useMediaQuery('(max-width: 639px)');
 
+/** Drafts and incomplete months are drawn dashed with hollow points. */
+function isProvisional(month: Month | undefined): boolean {
+    return month !== undefined && (month.is_draft || !month.is_complete);
+}
+
 const chartData = computed(() => {
-    const sorted = sortedStatements.value;
-    const labels = sorted.map((stmt) => {
-        const date = new Date(stmt.date);
+    const sorted = sortedMonths.value;
+    const labels = sorted.map((month) => {
+        const [year, monthNumber] = month.month.split('-').map(Number);
+        const date = new Date(year, monthNumber - 1);
 
         if (date.getMonth() === 0) {
             return date.toLocaleDateString('en-US', {
@@ -561,8 +705,8 @@ const chartData = computed(() => {
         return date.toLocaleDateString('en-US', { month: 'short' });
     });
 
-    const isDraftSegment = (ctx: ScriptableLineSegmentContext) =>
-        sorted[ctx.p1DataIndex]?.is_draft ?? false;
+    const isProvisionalSegment = (ctx: ScriptableLineSegmentContext) =>
+        isProvisional(sorted[ctx.p1DataIndex]);
 
     return {
         labels,
@@ -575,14 +719,16 @@ const chartData = computed(() => {
                 .replace(')', ', 0.03)');
 
             return {
-                label: col.label,
-                data: sorted.map((stmt) => amountOf(stmt, col.id)),
+                label: chartLabel(col),
+                data: sorted.map((month) => amountOf(month.amounts, col.id)),
                 borderColor: col.color,
                 backgroundColor: fillColor,
-                pointBackgroundColor: sorted.map((stmt) =>
-                    stmt.is_draft ? 'transparent' : col.color,
+                pointBackgroundColor: sorted.map((month) =>
+                    isProvisional(month) ? 'transparent' : col.color,
                 ),
-                pointBorderWidth: sorted.map((stmt) => (stmt.is_draft ? 2 : 1)),
+                pointBorderWidth: sorted.map((month) =>
+                    isProvisional(month) ? 2 : 1,
+                ),
                 borderWidth: isPhone.value ? 2 : 3,
                 pointRadius: isPhone.value ? 2 : 5,
                 pointHoverRadius: isPhone.value ? 3 : 5,
@@ -590,9 +736,9 @@ const chartData = computed(() => {
                 tension: 0,
                 segment: {
                     borderDash: (ctx: ScriptableLineSegmentContext) =>
-                        isDraftSegment(ctx) ? [6, 6] : undefined,
+                        isProvisionalSegment(ctx) ? [6, 6] : undefined,
                     backgroundColor: (ctx: ScriptableLineSegmentContext) =>
-                        isDraftSegment(ctx) ? draftFillColor : undefined,
+                        isProvisionalSegment(ctx) ? draftFillColor : undefined,
                 },
             };
         }),
@@ -628,14 +774,23 @@ const chartOptions = computed(() => {
                 reverse: true,
                 callbacks: {
                     title: (items: TooltipItem<'line'>[]) => {
-                        const stmt = sortedStatements.value[items[0].dataIndex];
-                        const date = new Date(stmt.date);
-                        const title = date.toLocaleDateString('en-US', {
+                        const month = sortedMonths.value[items[0].dataIndex];
+                        const [year, monthNumber] = month.month
+                            .split('-')
+                            .map(Number);
+                        const title = new Date(
+                            year,
+                            monthNumber - 1,
+                        ).toLocaleDateString('en-US', {
                             month: 'short',
                             year: 'numeric',
                         });
 
-                        return stmt.is_draft ? `${title} (draft)` : title;
+                        if (!month.is_complete) {
+                            return `${title} (${incompleteLabel(month).toLowerCase()})`;
+                        }
+
+                        return month.is_draft ? `${title} (draft)` : title;
                     },
                     label: (context: TooltipItem<'line'>) => {
                         const value = context.parsed.y ?? 0;
@@ -696,7 +851,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[4fr_6fr]">
-            <Card class="self-start">
+            <Card class="min-w-0 self-start">
                 <CardHeader>
                     <CardTitle class="leading-8">Table</CardTitle>
 
@@ -713,7 +868,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 </Button>
                             </PopoverTrigger>
 
-                            <PopoverContent align="end" class="w-64 p-2">
+                            <PopoverContent align="end" class="w-72 p-2">
                                 <p
                                     class="px-2 pt-1 pb-2 text-xs text-muted-foreground"
                                 >
@@ -737,6 +892,11 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         <span class="flex-1 truncate">
                                             {{ col.label }}
                                         </span>
+
+                                        <OwnerBadge
+                                            v-if="isAllOwners && col.owner"
+                                            :owner="col.owner"
+                                        />
 
                                         <Button
                                             size="icon-sm"
@@ -790,7 +950,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                 <CardContent>
                     <div
-                        v-if="statements.length >= 2"
+                        v-if="months.length >= 2"
                         class="mb-3 flex items-center justify-between rounded-md bg-muted/50 px-4 py-2 text-lg"
                     >
                         <span>Average</span>
@@ -798,34 +958,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <div class="flex items-center gap-3">
                             <span
                                 class="font-mono font-medium"
-                                :class="
-                                    averageGain >= 0
-                                        ? 'text-green-600 dark:text-green-400'
-                                        : 'text-red-600 dark:text-red-400'
-                                "
+                                :class="gainClass(averageGain)"
                             >
-                                {{ averageGain >= 0 ? '+' : '−'
-                                }}{{ formatAmount(Math.abs(averageGain)) }}
+                                {{ formatSignedAmount(averageGain) }}
                             </span>
 
                             <span
                                 class="font-mono font-medium"
-                                :class="
-                                    averageGainPercent >= 0
-                                        ? 'text-green-600 dark:text-green-400'
-                                        : 'text-red-600 dark:text-red-400'
-                                "
+                                :class="gainClass(averageGainPercent)"
                             >
-                                {{ averageGainPercent >= 0 ? '+' : '−'
-                                }}{{
-                                    Math.abs(averageGainPercent).toLocaleString(
-                                        'fr-FR',
-                                        {
-                                            minimumFractionDigits: 1,
-                                            maximumFractionDigits: 1,
-                                        },
-                                    )
-                                }}%
+                                {{ formatSignedPercent(averageGainPercent) }}
                             </span>
                         </div>
                     </div>
@@ -853,7 +995,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         v-for="col in columns"
                                         :key="col.id"
                                         draggable="true"
-                                        class="cursor-grab px-2 py-2 text-right transition-colors select-none active:cursor-grabbing"
+                                        class="cursor-grab px-2 py-2 text-right align-top transition-colors select-none active:cursor-grabbing"
                                         :class="{
                                             'opacity-40':
                                                 draggedAssetId === col.id,
@@ -872,7 +1014,36 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         @drop.prevent="onColumnDrop(col.id)"
                                         @dragend="onColumnDragEnd()"
                                     >
-                                        {{ col.label }}
+                                        <span
+                                            class="inline-flex items-center gap-1.5 whitespace-nowrap"
+                                        >
+                                            <span
+                                                v-if="isAllOwners && col.owner"
+                                                class="size-2 shrink-0 rounded-full sm:hidden"
+                                                :style="{
+                                                    backgroundColor:
+                                                        col.owner.color,
+                                                }"
+                                                :title="col.owner.name"
+                                            />
+
+                                            <span
+                                                v-if="isAllOwners && col.owner"
+                                                class="sr-only"
+                                            >
+                                                {{ col.owner.name }}:
+                                            </span>
+
+                                            {{ col.label }}
+                                        </span>
+
+                                        <span
+                                            v-if="isAllOwners && col.owner"
+                                            class="mt-1 hidden justify-end sm:flex"
+                                            aria-hidden="true"
+                                        >
+                                            <OwnerBadge :owner="col.owner" />
+                                        </span>
                                     </th>
 
                                     <th
@@ -888,322 +1059,450 @@ const breadcrumbs: BreadcrumbItem[] = [
                             </thead>
 
                             <template
-                                v-for="[year, yearStatements] in groupedByYear"
+                                v-for="[year, yearMonths] in groupedByYear"
                                 :key="year"
                             >
                                 <tbody>
-                                    <tr
-                                        v-for="statement in yearStatements"
-                                        :key="statement.id"
-                                        class="group/row border-b transition-colors last:border-0 hover:bg-muted/50"
-                                        :class="{
-                                            'bg-[repeating-linear-gradient(-45deg,transparent_0_6px,var(--color-muted)_6px_12px)] italic opacity-70':
-                                                statement.is_draft,
-                                        }"
+                                    <template
+                                        v-for="month in yearMonths"
+                                        :key="month.month"
                                     >
-                                        <td
-                                            class="w-0 pl-4 max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card"
+                                        <tr
+                                            class="group/row border-b transition-colors last:border-0 hover:bg-muted/50"
+                                            :class="{
+                                                'bg-[repeating-linear-gradient(-45deg,transparent_0_6px,var(--color-muted)_6px_12px)]':
+                                                    month.is_draft ||
+                                                    !month.is_complete,
+                                                'italic opacity-70':
+                                                    month.is_draft,
+                                                'cursor-pointer': isAllOwners,
+                                                'bg-muted/30':
+                                                    isAllOwners &&
+                                                    expandedMonths.has(
+                                                        month.month,
+                                                    ),
+                                            }"
+                                            @click="
+                                                isAllOwners &&
+                                                toggleMonth(month.month)
+                                            "
                                         >
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger as-child>
-                                                    <button
-                                                        class="flex h-full cursor-pointer items-center"
-                                                        aria-label="Actions"
-                                                    >
-                                                        <EllipsisVertical
-                                                            class="size-4 text-muted-foreground"
-                                                        />
-                                                    </button>
-                                                </DropdownMenuTrigger>
-
-                                                <DropdownMenuContent
-                                                    align="start"
-                                                >
-                                                    <DropdownMenuItem
-                                                        v-if="
-                                                            statement.is_draft
-                                                        "
-                                                        class="cursor-pointer"
-                                                        @click="
-                                                            finalizeStatement(
-                                                                statement,
-                                                            )
-                                                        "
-                                                    >
-                                                        <CircleCheck
-                                                            class="size-4"
-                                                        />
-                                                        Finalize
-                                                    </DropdownMenuItem>
-
-                                                    <DropdownMenuItem
-                                                        class="cursor-pointer"
-                                                        @click="
-                                                            openEdit(statement)
-                                                        "
-                                                    >
-                                                        <Pencil
-                                                            class="size-4"
-                                                        />
-                                                        Edit
-                                                    </DropdownMenuItem>
-
-                                                    <DropdownMenuItem
-                                                        class="cursor-pointer text-red-600 dark:text-red-400"
-                                                        @click="
-                                                            deleteStatement(
-                                                                statement,
-                                                            )
-                                                        "
-                                                    >
-                                                        <Trash2
-                                                            class="size-4"
-                                                        />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </td>
-
-                                        <td
-                                            class="border-r px-4 py-3 max-sm:sticky max-sm:left-8 max-sm:z-10 max-sm:bg-card max-sm:shadow-[1px_0_0_var(--color-border)]"
-                                        >
-                                            <span
-                                                class="flex items-center gap-2 text-muted-foreground"
+                                            <td
+                                                class="w-0 pl-4 max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card"
                                             >
-                                                {{
-                                                    formatMonth(statement.date)
-                                                }}
+                                                <ChevronDown
+                                                    v-if="isAllOwners"
+                                                    class="size-4 text-muted-foreground transition-transform"
+                                                    :class="{
+                                                        '-rotate-90':
+                                                            !expandedMonths.has(
+                                                                month.month,
+                                                            ),
+                                                    }"
+                                                    aria-hidden="true"
+                                                />
+
+                                                <StatementActionsMenu
+                                                    v-else-if="
+                                                        month.statements[0]
+                                                    "
+                                                    :statement="
+                                                        month.statements[0]
+                                                    "
+                                                    @finalize="
+                                                        finalizeStatement(
+                                                            month.statements[0],
+                                                        )
+                                                    "
+                                                    @edit="
+                                                        openEdit(
+                                                            month.statements[0],
+                                                        )
+                                                    "
+                                                    @delete="
+                                                        deleteStatement(
+                                                            month.statements[0],
+                                                        )
+                                                    "
+                                                />
+                                            </td>
+
+                                            <td
+                                                class="border-r px-4 py-3 max-sm:sticky max-sm:left-8 max-sm:z-10 max-sm:bg-card max-sm:shadow-[1px_0_0_var(--color-border)]"
+                                            >
+                                                <button
+                                                    v-if="isAllOwners"
+                                                    type="button"
+                                                    class="-mx-2 -my-1.5 flex min-h-9 cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1.5 text-left text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                                    :aria-expanded="
+                                                        expandedMonths.has(
+                                                            month.month,
+                                                        )
+                                                    "
+                                                >
+                                                    {{
+                                                        formatMonth(month.month)
+                                                    }}
+
+                                                    <Badge
+                                                        v-if="month.is_draft"
+                                                        variant="outline"
+                                                        class="border-dashed not-italic"
+                                                    >
+                                                        Draft
+                                                    </Badge>
+
+                                                    <span
+                                                        v-if="
+                                                            !month.is_complete
+                                                        "
+                                                        class="size-2 shrink-0 rounded-full bg-amber-500 sm:hidden"
+                                                        :title="
+                                                            incompleteLabel(
+                                                                month,
+                                                            )
+                                                        "
+                                                    >
+                                                        <span class="sr-only">
+                                                            {{
+                                                                incompleteLabel(
+                                                                    month,
+                                                                )
+                                                            }}
+                                                        </span>
+                                                    </span>
+
+                                                    <Badge
+                                                        v-if="
+                                                            !month.is_complete
+                                                        "
+                                                        variant="outline"
+                                                        class="hidden border-dashed border-amber-500/60 text-amber-700 not-italic sm:inline-flex dark:text-amber-400"
+                                                    >
+                                                        {{
+                                                            incompleteLabel(
+                                                                month,
+                                                            )
+                                                        }}
+                                                    </Badge>
+                                                </button>
+
+                                                <span
+                                                    v-else
+                                                    class="flex items-center gap-2 text-muted-foreground"
+                                                >
+                                                    {{
+                                                        formatMonth(month.month)
+                                                    }}
+
+                                                    <TooltipProvider
+                                                        v-if="
+                                                            month.statements[0]
+                                                                ?.note
+                                                        "
+                                                    >
+                                                        <Tooltip>
+                                                            <TooltipTrigger
+                                                                as-child
+                                                            >
+                                                                <MessageSquare
+                                                                    class="size-3.5 shrink-0 cursor-pointer"
+                                                                />
+                                                            </TooltipTrigger>
+
+                                                            <TooltipContent
+                                                                side="right"
+                                                            >
+                                                                {{
+                                                                    month
+                                                                        .statements[0]
+                                                                        .note
+                                                                }}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+
+                                                    <Badge
+                                                        v-if="month.is_draft"
+                                                        variant="outline"
+                                                        class="border-dashed not-italic"
+                                                    >
+                                                        Draft
+                                                    </Badge>
+                                                </span>
+                                            </td>
+
+                                            <td
+                                                v-for="col in columns"
+                                                :key="col.id"
+                                                class="px-2 py-3 text-right font-mono"
+                                                :class="
+                                                    (columnGainByMonth[
+                                                        month.month
+                                                    ]?.[col.id]?.gain ?? 0) < 0
+                                                        ? 'text-red-600 dark:text-red-400'
+                                                        : ''
+                                                "
+                                            >
+                                                <span
+                                                    v-if="
+                                                        !hasOwnerStatement(
+                                                            month,
+                                                            col,
+                                                        )
+                                                    "
+                                                    class="text-muted-foreground"
+                                                >
+                                                    —
+                                                </span>
 
                                                 <TooltipProvider
-                                                    v-if="statement.note"
+                                                    v-else-if="
+                                                        columnGainByMonth[
+                                                            month.month
+                                                        ]?.[col.id]?.percent !=
+                                                        null
+                                                    "
                                                 >
                                                     <Tooltip>
                                                         <TooltipTrigger
                                                             as-child
                                                         >
-                                                            <MessageSquare
-                                                                class="size-3.5 shrink-0 cursor-pointer"
-                                                            />
+                                                            <span
+                                                                class="cursor-default"
+                                                            >
+                                                                {{
+                                                                    formatAmount(
+                                                                        amountOf(
+                                                                            month.amounts,
+                                                                            col.id,
+                                                                        ),
+                                                                    )
+                                                                }}
+                                                            </span>
                                                         </TooltipTrigger>
 
-                                                        <TooltipContent
-                                                            side="right"
-                                                        >
-                                                            {{ statement.note }}
+                                                        <TooltipContent>
+                                                            <span
+                                                                :class="
+                                                                    columnGainByMonth[
+                                                                        month
+                                                                            .month
+                                                                    ][col.id]!
+                                                                        .gain >=
+                                                                    0
+                                                                        ? 'text-green-400 dark:text-green-600'
+                                                                        : 'text-red-400 dark:text-red-600'
+                                                                "
+                                                            >
+                                                                {{
+                                                                    formatSignedAmount(
+                                                                        columnGainByMonth[
+                                                                            month
+                                                                                .month
+                                                                        ][
+                                                                            col
+                                                                                .id
+                                                                        ]!.gain,
+                                                                    )
+                                                                }}
+                                                                ({{
+                                                                    formatSignedPercent(
+                                                                        columnGainByMonth[
+                                                                            month
+                                                                                .month
+                                                                        ][
+                                                                            col
+                                                                                .id
+                                                                        ]!
+                                                                            .percent!,
+                                                                    )
+                                                                }})
+                                                            </span>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
 
-                                                <Badge
-                                                    v-if="statement.is_draft"
-                                                    variant="outline"
-                                                    class="border-dashed not-italic"
-                                                >
-                                                    Draft
-                                                </Badge>
-                                            </span>
-                                        </td>
+                                                <template v-else>
+                                                    {{
+                                                        formatAmount(
+                                                            amountOf(
+                                                                month.amounts,
+                                                                col.id,
+                                                            ),
+                                                        )
+                                                    }}
+                                                </template>
+                                            </td>
 
-                                        <td
-                                            v-for="col in columns"
-                                            :key="col.id"
-                                            class="px-2 py-3 text-right font-mono"
-                                            :class="
-                                                columnGainByStatementId[
-                                                    statement.id
-                                                ][col.id].gain < 0
-                                                    ? 'text-red-600 dark:text-red-400'
-                                                    : ''
-                                            "
-                                        >
-                                            <TooltipProvider
-                                                v-if="
-                                                    columnGainByStatementId[
-                                                        statement.id
-                                                    ][col.id].percent !== null
+                                            <td
+                                                class="border-l bg-muted/50 px-4 py-3 text-right font-mono font-bold"
+                                            >
+                                                {{ formatAmount(month.total) }}
+                                            </td>
+
+                                            <td
+                                                class="px-4 py-3 text-right font-mono"
+                                                :class="gainClass(month.gain)"
+                                            >
+                                                {{
+                                                    month.gain !== null
+                                                        ? formatSignedAmount(
+                                                              month.gain,
+                                                          )
+                                                        : '—'
+                                                }}
+                                            </td>
+
+                                            <td
+                                                class="px-4 py-3 text-right font-mono"
+                                                :class="
+                                                    gainClass(
+                                                        month.gain_percent,
+                                                    )
                                                 "
                                             >
-                                                <Tooltip>
-                                                    <TooltipTrigger as-child>
-                                                        <span
-                                                            class="cursor-default"
-                                                        >
-                                                            {{
-                                                                formatAmount(
-                                                                    amountOf(
-                                                                        statement,
-                                                                        col.id,
-                                                                    ),
-                                                                )
-                                                            }}
-                                                        </span>
-                                                    </TooltipTrigger>
+                                                {{
+                                                    month.gain_percent !== null
+                                                        ? formatSignedPercent(
+                                                              month.gain_percent,
+                                                          )
+                                                        : '—'
+                                                }}
+                                            </td>
+                                        </tr>
 
-                                                    <TooltipContent>
-                                                        <span
-                                                            :class="
-                                                                columnGainByStatementId[
-                                                                    statement.id
-                                                                ][col.id]
-                                                                    .gain >= 0
-                                                                    ? 'text-green-400 dark:text-green-600'
-                                                                    : 'text-red-400 dark:text-red-600'
+                                        <template
+                                            v-if="
+                                                isAllOwners &&
+                                                expandedMonths.has(month.month)
+                                            "
+                                        >
+                                            <tr
+                                                v-for="statement in month.statements"
+                                                :key="statement.id"
+                                                class="border-b bg-muted/30 text-xs"
+                                                :class="{
+                                                    'bg-[repeating-linear-gradient(-45deg,transparent_0_6px,var(--color-muted)_6px_12px)] italic opacity-70':
+                                                        statement.is_draft,
+                                                }"
+                                            >
+                                                <td
+                                                    class="w-0 pl-4 max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card"
+                                                >
+                                                    <StatementActionsMenu
+                                                        :statement="statement"
+                                                        :label="`Actions for ${ownerById(statement.user_id)?.name ?? 'statement'}`"
+                                                        @finalize="
+                                                            finalizeStatement(
+                                                                statement,
+                                                            )
+                                                        "
+                                                        @edit="
+                                                            openEdit(statement)
+                                                        "
+                                                        @delete="
+                                                            deleteStatement(
+                                                                statement,
+                                                            )
+                                                        "
+                                                    />
+                                                </td>
+
+                                                <td
+                                                    class="border-r py-2 pr-4 pl-6 max-sm:sticky max-sm:left-8 max-sm:z-10 max-sm:bg-card max-sm:shadow-[1px_0_0_var(--color-border)]"
+                                                >
+                                                    <span
+                                                        class="flex items-center gap-2"
+                                                    >
+                                                        <OwnerBadge
+                                                            v-if="
+                                                                ownerById(
+                                                                    statement.user_id,
+                                                                )
+                                                            "
+                                                            :owner="
+                                                                ownerById(
+                                                                    statement.user_id,
+                                                                )!
+                                                            "
+                                                            class="not-italic"
+                                                        />
+
+                                                        <TooltipProvider
+                                                            v-if="
+                                                                statement.note
                                                             "
                                                         >
-                                                            {{
-                                                                columnGainByStatementId[
-                                                                    statement.id
-                                                                ][col.id]
-                                                                    .gain >= 0
-                                                                    ? '+'
-                                                                    : '−'
-                                                            }}{{
-                                                                formatAmount(
-                                                                    Math.abs(
-                                                                        columnGainByStatementId[
-                                                                            statement
-                                                                                .id
-                                                                        ][
-                                                                            col
-                                                                                .id
-                                                                        ].gain,
-                                                                    ),
-                                                                )
-                                                            }}
-                                                            ({{
-                                                                columnGainByStatementId[
-                                                                    statement.id
-                                                                ][col.id]
-                                                                    .percent! >=
-                                                                0
-                                                                    ? '+'
-                                                                    : '−'
-                                                            }}{{
-                                                                Math.abs(
-                                                                    columnGainByStatementId[
-                                                                        statement
-                                                                            .id
-                                                                    ][col.id]
-                                                                        .percent!,
-                                                                ).toLocaleString(
-                                                                    'fr-FR',
-                                                                    {
-                                                                        minimumFractionDigits: 1,
-                                                                        maximumFractionDigits: 1,
-                                                                    },
-                                                                )
-                                                            }}%)
-                                                        </span>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger
+                                                                    as-child
+                                                                >
+                                                                    <MessageSquare
+                                                                        class="size-3.5 shrink-0 cursor-pointer text-muted-foreground"
+                                                                    />
+                                                                </TooltipTrigger>
 
-                                            <template v-else>
-                                                {{
-                                                    formatAmount(
-                                                        amountOf(
-                                                            statement,
-                                                            col.id,
-                                                        ),
-                                                    )
-                                                }}
-                                            </template>
-                                        </td>
+                                                                <TooltipContent
+                                                                    side="right"
+                                                                >
+                                                                    {{
+                                                                        statement.note
+                                                                    }}
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
 
-                                        <td
-                                            class="border-l bg-muted/50 px-4 py-3 text-right font-mono font-bold"
-                                        >
-                                            {{
-                                                formatAmount(
-                                                    statementTotal(statement),
-                                                )
-                                            }}
-                                        </td>
+                                                        <Badge
+                                                            v-if="
+                                                                statement.is_draft
+                                                            "
+                                                            variant="outline"
+                                                            class="border-dashed not-italic"
+                                                        >
+                                                            Draft
+                                                        </Badge>
+                                                    </span>
+                                                </td>
 
-                                        <td
-                                            class="px-4 py-3 text-right font-mono"
-                                            :class="
-                                                gainByStatementId[
-                                                    statement.id
-                                                ] !== null
-                                                    ? gainByStatementId[
-                                                          statement.id
-                                                      ]! >= 0
-                                                        ? 'text-green-600 dark:text-green-400'
-                                                        : 'text-red-600 dark:text-red-400'
-                                                    : 'text-muted-foreground'
-                                            "
-                                        >
-                                            <template
-                                                v-if="
-                                                    gainByStatementId[
-                                                        statement.id
-                                                    ] !== null
-                                                "
-                                            >
-                                                {{
-                                                    gainByStatementId[
-                                                        statement.id
-                                                    ]! >= 0
-                                                        ? '+'
-                                                        : '−'
-                                                }}{{
-                                                    formatAmount(
-                                                        Math.abs(
-                                                            gainByStatementId[
-                                                                statement.id
-                                                            ]!,
-                                                        ),
-                                                    )
-                                                }}
-                                            </template>
+                                                <td
+                                                    v-for="col in columns"
+                                                    :key="col.id"
+                                                    class="px-2 py-2 text-right font-mono text-muted-foreground"
+                                                >
+                                                    <template
+                                                        v-if="
+                                                            col.ownerId ===
+                                                            statement.user_id
+                                                        "
+                                                    >
+                                                        {{
+                                                            formatAmount(
+                                                                amountOf(
+                                                                    statement.amounts,
+                                                                    col.id,
+                                                                ),
+                                                            )
+                                                        }}
+                                                    </template>
+                                                </td>
 
-                                            <template v-else>—</template>
-                                        </td>
+                                                <td
+                                                    class="border-l px-4 py-2 text-right font-mono font-semibold"
+                                                >
+                                                    {{
+                                                        formatAmount(
+                                                            statementTotal(
+                                                                statement,
+                                                            ),
+                                                        )
+                                                    }}
+                                                </td>
 
-                                        <td
-                                            class="px-4 py-3 text-right font-mono"
-                                            :class="
-                                                gainPercentByStatementId[
-                                                    statement.id
-                                                ] !== null
-                                                    ? gainPercentByStatementId[
-                                                          statement.id
-                                                      ]! >= 0
-                                                        ? 'text-green-600 dark:text-green-400'
-                                                        : 'text-red-600 dark:text-red-400'
-                                                    : 'text-muted-foreground'
-                                            "
-                                        >
-                                            <template
-                                                v-if="
-                                                    gainPercentByStatementId[
-                                                        statement.id
-                                                    ] !== null
-                                                "
-                                            >
-                                                {{
-                                                    gainPercentByStatementId[
-                                                        statement.id
-                                                    ]! >= 0
-                                                        ? '+'
-                                                        : '−'
-                                                }}{{
-                                                    Math.abs(
-                                                        gainPercentByStatementId[
-                                                            statement.id
-                                                        ]!,
-                                                    ).toLocaleString('fr-FR', {
-                                                        minimumFractionDigits: 1,
-                                                        maximumFractionDigits: 1,
-                                                    })
-                                                }}%
-                                            </template>
-
-                                            <template v-else>—</template>
-                                        </td>
-                                    </tr>
+                                                <td colspan="2"></td>
+                                            </tr>
+                                        </template>
+                                    </template>
 
                                     <tr
                                         class="border-b bg-muted/50 last:border-0"
@@ -1234,7 +1533,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </CardHeader>
 
                 <CardContent class="min-h-0 flex-1 overflow-hidden">
-                    <div v-if="statements.length >= 2" class="h-full">
+                    <div v-if="months.length >= 2" class="h-full">
                         <Line
                             :data="chartData as any"
                             :options="chartOptions"
@@ -1249,156 +1548,206 @@ const breadcrumbs: BreadcrumbItem[] = [
         </div>
 
         <Dialog v-model:open="showDialog">
-            <DialogContent>
+            <DialogContent class="max-h-[90dvh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{{
                         isEditing ? 'Edit Statement' : 'Add Statement'
                     }}</DialogTitle>
                 </DialogHeader>
 
-                <form @submit.prevent="submitForm" class="space-y-4">
-                    <InputError :message="form.errors.date" />
+                <form @submit.prevent="submitForm">
+                    <fieldset :disabled="form.processing" class="space-y-4">
+                        <div class="space-y-2">
+                            <Label :for="isEditing ? undefined : 'stmt-owner'">
+                                Owner
+                            </Label>
 
-                    <div v-if="canBeDraft" class="space-y-2">
-                        <Label
-                            for="stmt-is-draft"
-                            class="flex items-center gap-3"
-                        >
-                            <Checkbox
-                                id="stmt-is-draft"
-                                :model-value="form.is_draft"
-                                :disabled="form.processing"
-                                @update:model-value="toggleDraft"
-                            />
-
-                            <span>Draft (prediction)</span>
-                        </Label>
-
-                        <InputError :message="form.errors.is_draft" />
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label>Date</Label>
-
-                        <div
-                            class="rounded-md border p-3"
-                            :class="{
-                                'pointer-events-none opacity-50':
-                                    isEditing || form.processing,
-                            }"
-                        >
-                            <div class="mb-3 flex items-center justify-between">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    class="cursor-pointer"
-                                    @click="pickerYear--"
-                                >
-                                    <ChevronLeft class="size-4" />
-                                </Button>
-
-                                <span class="text-sm font-medium">{{
-                                    pickerYear
-                                }}</span>
-
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    class="cursor-pointer"
-                                    @click="pickerYear++"
-                                >
-                                    <ChevronRight class="size-4" />
-                                </Button>
+                            <div v-if="isEditing">
+                                <OwnerBadge
+                                    v-if="ownerById(form.user_id)"
+                                    :owner="ownerById(form.user_id)!"
+                                />
                             </div>
 
-                            <div class="grid grid-cols-4 gap-1">
-                                <Button
-                                    v-for="(name, idx) in shortMonths"
-                                    :key="idx"
-                                    type="button"
-                                    :variant="
-                                        selectedYear === pickerYear &&
-                                        selectedMonth === idx + 1
-                                            ? 'default'
-                                            : 'ghost'
-                                    "
-                                    size="sm"
-                                    class="cursor-pointer"
-                                    :disabled="isMonthDisabled(idx + 1)"
-                                    @click="selectMonth(idx + 1)"
+                            <OwnerSelect
+                                v-else
+                                id="stmt-owner"
+                                :model-value="form.user_id"
+                                :disabled="form.processing || !isAllOwners"
+                                @update:model-value="selectOwner"
+                            />
+
+                            <InputError :message="form.errors.user_id" />
+                        </div>
+
+                        <InputError :message="form.errors.date" />
+
+                        <div v-if="canBeDraft" class="space-y-2">
+                            <Label
+                                for="stmt-is-draft"
+                                class="flex items-center gap-3"
+                            >
+                                <Checkbox
+                                    id="stmt-is-draft"
+                                    :model-value="form.is_draft"
+                                    :disabled="form.processing"
+                                    @update:model-value="toggleDraft"
+                                />
+
+                                <span>Draft (prediction)</span>
+                            </Label>
+
+                            <InputError :message="form.errors.is_draft" />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label>Date</Label>
+
+                            <div
+                                class="rounded-md border p-3"
+                                :class="{
+                                    'pointer-events-none opacity-50':
+                                        isEditing || form.processing,
+                                }"
+                            >
+                                <div
+                                    class="mb-3 flex items-center justify-between"
                                 >
-                                    {{ name }}
-                                </Button>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        class="cursor-pointer"
+                                        aria-label="Previous year"
+                                        @click="pickerYear--"
+                                    >
+                                        <ChevronLeft class="size-4" />
+                                    </Button>
+
+                                    <span class="text-sm font-medium">{{
+                                        pickerYear
+                                    }}</span>
+
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon-sm"
+                                        class="cursor-pointer"
+                                        aria-label="Next year"
+                                        @click="pickerYear++"
+                                    >
+                                        <ChevronRight class="size-4" />
+                                    </Button>
+                                </div>
+
+                                <div class="grid grid-cols-4 gap-1">
+                                    <Button
+                                        v-for="(name, idx) in shortMonths"
+                                        :key="idx"
+                                        type="button"
+                                        :variant="
+                                            selectedYear === pickerYear &&
+                                            selectedMonth === idx + 1
+                                                ? 'default'
+                                                : 'ghost'
+                                        "
+                                        size="sm"
+                                        class="cursor-pointer"
+                                        :disabled="isMonthDisabled(idx + 1)"
+                                        @click="selectMonth(idx + 1)"
+                                    >
+                                        {{ name }}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-4">
-                        <div
-                            v-for="col in columns"
-                            :key="col.id"
-                            class="space-y-2"
+                        <p
+                            v-if="formColumns.length === 0"
+                            class="rounded-md border border-dashed p-3 text-sm text-muted-foreground"
                         >
-                            <Label :for="`stmt-asset-${col.id}`">{{
-                                col.label
-                            }}</Label>
+                            This owner has no assets yet.
 
-                            <Input
-                                :id="`stmt-asset-${col.id}`"
-                                v-model="form.amounts[col.id]"
-                                type="number"
-                                min="0"
-                                inputmode="numeric"
-                                class="[-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            <Link
+                                :href="assetsIndex()"
+                                class="font-medium text-foreground underline underline-offset-4"
+                            >
+                                Add assets
+                            </Link>
+                        </p>
+
+                        <div
+                            v-else
+                            class="grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-4"
+                        >
+                            <div
+                                v-for="col in formColumns"
+                                :key="col.id"
+                                class="space-y-2"
+                            >
+                                <Label :for="`stmt-asset-${col.id}`">{{
+                                    col.label
+                                }}</Label>
+
+                                <Input
+                                    :id="`stmt-asset-${col.id}`"
+                                    v-model="form.amounts[col.id]"
+                                    type="number"
+                                    min="0"
+                                    inputmode="numeric"
+                                    class="[-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    :disabled="form.processing"
+                                />
+
+                                <InputError :message="amountError(col.id)" />
+                            </div>
+                        </div>
+
+                        <InputError :message="form.errors.amounts" />
+
+                        <div class="space-y-2">
+                            <Label for="stmt-note">
+                                Note
+                                <span class="font-normal text-muted-foreground">
+                                    (optional)
+                                </span>
+                            </Label>
+
+                            <Textarea
+                                id="stmt-note"
+                                v-model="form.note"
+                                maxlength="255"
+                                rows="2"
+                                placeholder="Explains this month's balance"
                                 :disabled="form.processing"
                             />
 
-                            <InputError :message="amountError(col.id)" />
+                            <InputError :message="form.errors.note" />
                         </div>
-                    </div>
 
-                    <div class="space-y-2">
-                        <Label for="stmt-note">
-                            Note
-                            <span class="font-normal text-muted-foreground">
-                                (optional)
-                            </span>
-                        </Label>
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                class="cursor-pointer"
+                                :disabled="form.processing"
+                                @click="showDialog = false"
+                            >
+                                Cancel
+                            </Button>
 
-                        <Textarea
-                            id="stmt-note"
-                            v-model="form.note"
-                            maxlength="255"
-                            rows="2"
-                            placeholder="Explains this month's balance"
-                            :disabled="form.processing"
-                        />
-
-                        <InputError :message="form.errors.note" />
-                    </div>
-
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            class="cursor-pointer"
-                            :disabled="form.processing"
-                            @click="showDialog = false"
-                        >
-                            Cancel
-                        </Button>
-
-                        <Button
-                            type="submit"
-                            class="cursor-pointer"
-                            :disabled="form.processing"
-                        >
-                            <Spinner v-if="form.processing" />
-                            {{ isEditing ? 'Update' : 'Create' }}
-                        </Button>
-                    </DialogFooter>
+                            <Button
+                                type="submit"
+                                class="cursor-pointer"
+                                :disabled="
+                                    form.processing || formColumns.length === 0
+                                "
+                            >
+                                <Spinner v-if="form.processing" />
+                                {{ isEditing ? 'Update' : 'Create' }}
+                            </Button>
+                        </DialogFooter>
+                    </fieldset>
                 </form>
             </DialogContent>
         </Dialog>

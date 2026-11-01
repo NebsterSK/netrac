@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Finance\Asset\StoreAssetRequest;
 use App\Http\Requests\Finance\Asset\UpdateAssetRequest;
 use App\Models\Finance\Asset;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -16,9 +18,18 @@ use Throwable;
 
 class AssetController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $assets = Asset::withCount('statements')->orderBy('name')->get();
+        $assets = Asset::query()
+            ->ownedBy($request->user()->financeOwnerFilter())
+            ->withCount('statements')
+            ->orderBy(
+                User::query()
+                    ->select('name')
+                    ->whereColumn('users.id', 'assets.user_id'),
+            )
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('finance/Asset', [
             'assets' => AssetData::collect($assets),
@@ -85,7 +96,7 @@ class AssetController extends Controller
     }
 
     /**
-     * Only one asset drives the monthly balance, so marking this one unmarks the rest.
+     * Only one asset drives the monthly balance, so marking this one unmarks the rest of that owner's assets.
      */
     private function keepSingleMonthlyBalanceAsset(Asset $asset): void
     {
@@ -94,6 +105,7 @@ class AssetController extends Controller
         }
 
         Asset::whereKeyNot($asset->id)
+            ->where('user_id', $asset->user_id)
             ->where('tracks_monthly_balance', true)
             ->update(['tracks_monthly_balance' => false]);
     }

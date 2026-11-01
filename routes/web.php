@@ -8,6 +8,7 @@ use App\Http\Controllers\Finance\ExpenseCategoryController;
 use App\Http\Controllers\Finance\ExpenseController;
 use App\Http\Controllers\Finance\MonthlyBalanceController;
 use App\Http\Controllers\Finance\NetWorthController;
+use App\Http\Controllers\Finance\OwnerFilterController;
 use App\Http\Controllers\Health\ExerciseCategoryController;
 use App\Http\Controllers\Health\ExerciseController;
 use App\Http\Controllers\Health\SessionController;
@@ -32,6 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix('finance')->name('finance.')->group(function () {
+        Route::put('/owner-filter', [OwnerFilterController::class, 'update'])->name('owner-filter.update');
         Route::get('/monthly-balance', [MonthlyBalanceController::class, 'index'])->name('monthly-balance.index');
         Route::resource('/net-worth', NetWorthController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['net-worth' => 'statement']);
         Route::resource('/assets', AssetController::class)->only(['index', 'store', 'update', 'destroy']);

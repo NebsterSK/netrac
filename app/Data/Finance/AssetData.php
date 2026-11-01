@@ -10,6 +10,7 @@ class AssetData extends Data
 {
     public function __construct(
         public int $id,
+        public int $user_id,
         public string $name,
         public ?string $color,
         public bool $tracks_monthly_balance,

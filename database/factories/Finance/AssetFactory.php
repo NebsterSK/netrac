@@ -3,6 +3,7 @@
 namespace Database\Factories\Finance;
 
 use App\Models\Finance\Asset;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,6 +19,7 @@ class AssetFactory extends Factory
     public function definition(): array
     {
         return [
+            'user_id' => User::factory(),
             'name' => fake()->unique()->words(asText: true),
             'color' => fake()->hexColor(),
             'tracks_monthly_balance' => false,

@@ -2,6 +2,7 @@
 
 use App\Models\Finance\Expense;
 use App\Models\Finance\ExpenseCategory;
+use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 describe('access control', function () {
@@ -33,6 +34,19 @@ it('lists categories alphabetically with expense counts', function () {
             ->where('categories.0.name', 'Apex')
             ->where('categories.1.name', 'Food')
             ->where('categories.1.expenses_count', 2));
+});
+
+it('counts only the filtered owner\'s expenses', function () {
+    $other = User::factory()->create();
+    $viewer = verifiedUser(['finance_owner_id' => $other->id]);
+    $food = ExpenseCategory::factory()->create();
+
+    Expense::factory()->count(2)->for($other, 'owner')->create(['expense_category_id' => $food->id]);
+    Expense::factory()->count(3)->for($viewer, 'owner')->create(['expense_category_id' => $food->id]);
+
+    $this->actingAs($viewer)
+        ->get(route('finance.expense-categories.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('categories.0.expenses_count', 2));
 });
 
 it('stores a category', function () {

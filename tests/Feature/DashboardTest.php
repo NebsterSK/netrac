@@ -3,8 +3,12 @@
 use App\Models\Finance\Asset;
 use App\Models\Finance\Expense;
 use App\Models\Finance\ExpenseCategory;
-use App\Models\Finance\Statement;
 use Inertia\Testing\AssertableInertia as Assert;
+
+beforeEach(function () {
+    $this->owner = verifiedUser();
+    $this->account = Asset::factory()->for($this->owner, 'owner')->tracksMonthlyBalance()->create();
+});
 
 describe('access control', function () {
     it('redirects guests to login', function () {
@@ -13,7 +17,7 @@ describe('access control', function () {
     });
 
     it('allows authenticated users', function () {
-        $this->actingAs(verifiedUser())
+        $this->actingAs($this->owner)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
@@ -25,7 +29,7 @@ describe('access control', function () {
 });
 
 it('reports null period averages with no balances', function () {
-    $this->actingAs(verifiedUser())
+    $this->actingAs($this->owner)
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('periodAverages.overall', null)
@@ -33,14 +37,12 @@ it('reports null period averages with no balances', function () {
 });
 
 it('averages derived balances per calendar month', function () {
-    $account = Asset::monthlyBalanceAsset();
+    balanceStatement($this->owner, $this->account, '2023-02-01', 1000);
+    balanceStatement($this->owner, $this->account, '2023-03-01', 1100);
+    balanceStatement($this->owner, $this->account, '2024-02-01', 2000);
+    balanceStatement($this->owner, $this->account, '2024-03-01', 2201);
 
-    Statement::factory()->withAmount($account, 1000)->create(['date' => '2023-02-01']);
-    Statement::factory()->withAmount($account, 1100)->create(['date' => '2023-03-01']);
-    Statement::factory()->withAmount($account, 2000)->create(['date' => '2024-02-01']);
-    Statement::factory()->withAmount($account, 2201)->create(['date' => '2024-03-01']);
-
-    $this->actingAs(verifiedUser())
+    $this->actingAs($this->owner)
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
             ->has('monthlyAverages', 2)
@@ -53,14 +55,12 @@ it('averages derived balances per calendar month', function () {
 });
 
 it('computes the period averages from derived balances', function () {
-    $account = Asset::monthlyBalanceAsset();
+    balanceStatement($this->owner, $this->account, '2024-01-01', 1000);
+    balanceStatement($this->owner, $this->account, '2024-02-01', 1100);
+    balanceStatement($this->owner, $this->account, '2024-03-01', 1300);
+    balanceStatement($this->owner, $this->account, '2024-04-01', 1600);
 
-    Statement::factory()->withAmount($account, 1000)->create(['date' => '2024-01-01']);
-    Statement::factory()->withAmount($account, 1100)->create(['date' => '2024-02-01']);
-    Statement::factory()->withAmount($account, 1300)->create(['date' => '2024-03-01']);
-    Statement::factory()->withAmount($account, 1600)->create(['date' => '2024-04-01']);
-
-    $this->actingAs(verifiedUser())
+    $this->actingAs($this->owner)
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('periodAverages.overall', 200)
@@ -68,13 +68,11 @@ it('computes the period averages from derived balances', function () {
 });
 
 it('leaves a draft balance out of the averages', function () {
-    $account = Asset::monthlyBalanceAsset();
+    balanceStatement($this->owner, $this->account, '2024-01-01', 1000);
+    balanceStatement($this->owner, $this->account, '2024-02-01', 1100);
+    balanceStatement($this->owner, $this->account, '2024-03-01', 9000, ['is_draft' => true]);
 
-    Statement::factory()->withAmount($account, 1000)->create(['date' => '2024-01-01']);
-    Statement::factory()->withAmount($account, 1100)->create(['date' => '2024-02-01']);
-    Statement::factory()->draft()->withAmount($account, 9000)->create(['date' => '2024-03-01']);
-
-    $this->actingAs(verifiedUser())
+    $this->actingAs($this->owner)
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('periodAverages.overall', 100)
@@ -85,11 +83,11 @@ it('returns every expense category with its expenses and total, in saved order',
     $subscriptions = ExpenseCategory::factory()->create(['name' => 'Subscriptions', 'position' => 2]);
     $utilities = ExpenseCategory::factory()->create(['name' => 'Utilities', 'position' => 1]);
 
-    Expense::factory()->create(['expense_category_id' => $subscriptions->id, 'name' => 'Netflix', 'amount' => 13]);
-    Expense::factory()->create(['expense_category_id' => $subscriptions->id, 'name' => 'YouTube', 'amount' => 20]);
-    Expense::factory()->create(['expense_category_id' => $utilities->id, 'name' => 'Water', 'amount' => 40]);
+    Expense::factory()->for($this->owner, 'owner')->create(['expense_category_id' => $subscriptions->id, 'name' => 'Netflix', 'amount' => 13]);
+    Expense::factory()->for($this->owner, 'owner')->create(['expense_category_id' => $subscriptions->id, 'name' => 'YouTube', 'amount' => 20]);
+    Expense::factory()->for($this->owner, 'owner')->create(['expense_category_id' => $utilities->id, 'name' => 'Water', 'amount' => 40]);
 
-    $this->actingAs(verifiedUser())
+    $this->actingAs($this->owner)
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
             ->has('expenseCategories', 2)
@@ -106,7 +104,63 @@ it('returns every expense category with its expenses and total, in saved order',
 it('omits expense categories without expenses', function () {
     ExpenseCategory::factory()->create(['name' => 'Empty']);
 
-    $this->actingAs(verifiedUser())
+    $this->actingAs($this->owner)
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page->has('expenseCategories', 0));
+});
+
+describe('owner filter', function () {
+    beforeEach(function () {
+        $this->partner = verifiedUser();
+        $this->partnerAccount = Asset::factory()->for($this->partner, 'owner')->tracksMonthlyBalance()->create();
+    });
+
+    it("averages only the filtered owner's balances", function () {
+        balanceStatement($this->owner, $this->account, '2024-01-01', 1000);
+        balanceStatement($this->owner, $this->account, '2024-02-01', 1100);
+        balanceStatement($this->partner, $this->partnerAccount, '2024-01-01', 100);
+        balanceStatement($this->partner, $this->partnerAccount, '2024-02-01', 400);
+
+        $this->owner->update(['finance_owner_id' => $this->partner->id]);
+
+        $this->actingAs($this->owner)
+            ->get(route('dashboard'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('periodAverages.overall', 300)
+                ->where('monthlyAverages.0.average', 300));
+    });
+
+    it('averages the summed balances under All, leaving out incomplete months', function () {
+        balanceStatement($this->owner, $this->account, '2024-01-01', 1000);
+        balanceStatement($this->owner, $this->account, '2024-02-01', 1100);
+        balanceStatement($this->owner, $this->account, '2024-03-01', 1200);
+        balanceStatement($this->partner, $this->partnerAccount, '2024-01-01', 100);
+        balanceStatement($this->partner, $this->partnerAccount, '2024-02-01', 400);
+
+        $this->actingAs($this->owner)
+            ->get(route('dashboard'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('periodAverages.overall', 400)
+                ->has('monthlyAverages', 1));
+    });
+
+    it("breaks down only the filtered owner's expenses", function () {
+        $utilities = ExpenseCategory::factory()->create(['name' => 'Utilities']);
+        $hobbies = ExpenseCategory::factory()->create(['name' => 'Hobbies']);
+
+        Expense::factory()->for($this->owner, 'owner')->create(['expense_category_id' => $utilities->id, 'name' => 'Water', 'amount' => 40]);
+        Expense::factory()->for($this->partner, 'owner')->create(['expense_category_id' => $utilities->id, 'name' => 'Power', 'amount' => 60]);
+        Expense::factory()->for($this->partner, 'owner')->create(['expense_category_id' => $hobbies->id, 'name' => 'Yarn', 'amount' => 15]);
+
+        $this->owner->update(['finance_owner_id' => $this->owner->id]);
+
+        $this->actingAs($this->owner)
+            ->get(route('dashboard'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('expenseCategories', 1)
+                ->where('expenseCategories.0.name', 'Utilities')
+                ->where('expenseCategories.0.total', 40)
+                ->has('expenseCategories.0.expenses', 1)
+                ->where('expenseCategories.0.expenses.0.name', 'Water'));
+    });
 });

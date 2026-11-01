@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import ColorPicker from '@/components/ColorPicker.vue';
 import DeleteUser from '@/components/DeleteUser.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -31,6 +32,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+const color = ref<string | null>(user.value.color);
 </script>
 
 <template>
@@ -44,7 +46,7 @@ const user = computed(() => page.props.auth.user);
                 <Heading
                     variant="small"
                     title="Profile information"
-                    description="Update your name and email address"
+                    description="Update your name, email address and colour"
                 />
 
                 <Form
@@ -85,6 +87,24 @@ const user = computed(() => page.props.auth.user);
                         />
 
                         <InputError class="mt-2" :message="errors.email" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="color">Colour</Label>
+
+                        <ColorPicker
+                            id="color"
+                            v-model="color"
+                            :allow-automatic="false"
+                        />
+
+                        <input
+                            type="hidden"
+                            name="color"
+                            :value="color ?? ''"
+                        />
+
+                        <InputError class="mt-2" :message="errors.color" />
                     </div>
 
                     <div v-if="mustVerifyEmail && !user.email_verified_at">

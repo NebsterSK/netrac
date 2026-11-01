@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Finance;
 
 use App\Data\Finance\AssetData;
-use App\Data\Finance\StatementData;
+use App\Data\Finance\NetWorthMonthData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Finance\Statement\StoreStatementRequest;
 use App\Http\Requests\Finance\Statement\UpdateStatementRequest;
 use App\Models\Finance\Asset;
 use App\Models\Finance\Statement;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -18,14 +20,14 @@ use Throwable;
 
 class NetWorthController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $statements = Statement::with('assets')->orderBy('date', 'desc')->get();
+        $ownerFilter = $request->user()->financeOwnerFilter();
 
         return Inertia::render('finance/NetWorth', [
-            'assets' => AssetData::collect(Asset::orderBy('name')->get()),
-            'statements' => StatementData::collect($statements),
-            'existingDates' => $statements->pluck('date')->toArray(),
+            'assets' => AssetData::collect(Asset::query()->ownedBy($ownerFilter)->orderBy('name')->get()),
+            'months' => NetWorthMonthData::forOwnerFilter($ownerFilter),
+            'existingMonths' => $this->existingMonths(),
         ]);
     }
 
@@ -86,6 +88,22 @@ class NetWorthController extends Controller
         }
 
         return to_route('finance.net-worth.index')->with('success', 'Statement deleted.');
+    }
+
+    /**
+     * Months each owner already has a statement for, across all owners, since
+     * a new statement can be created for any owner.
+     *
+     * @return array<int, array<int, string>> 'YYYY-MM' months keyed by user id
+     */
+    private function existingMonths(): array
+    {
+        return Statement::query()
+            ->orderBy('month')
+            ->get(['user_id', 'month'])
+            ->groupBy('user_id')
+            ->map(fn (Collection $statements): array => $statements->pluck('month')->all())
+            ->all();
     }
 
     /**

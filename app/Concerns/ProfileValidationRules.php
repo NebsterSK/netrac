@@ -17,6 +17,7 @@ trait ProfileValidationRules
         return [
             'name' => $this->nameRules(),
             'email' => $this->emailRules($userId),
+            'color' => $this->colorRules(),
         ];
     }
 
@@ -28,6 +29,16 @@ trait ProfileValidationRules
     protected function nameRules(): array
     {
         return ['required', 'string', 'max:255'];
+    }
+
+    /**
+     * Get the validation rules used to validate the user's identifying colour.
+     *
+     * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
+     */
+    protected function colorRules(): array
+    {
+        return ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'];
     }
 
     /**
