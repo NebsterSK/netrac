@@ -10,7 +10,8 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 /**
  * A month's balance, derived from how much the asset that tracks the monthly
- * balance (the Account) changed since the previous statement. Never stored.
+ * balance (the owner's Account) changed since the owner's previous statement.
+ * Never stored.
  */
 #[TypeScript]
 class MonthlyBalanceData extends Data
@@ -23,22 +24,38 @@ class MonthlyBalanceData extends Data
     ) {}
 
     /**
-     * Build the balances from every statement, loading only the tracked
-     * asset's amounts instead of every pivot row.
+     * Build the balances for the given owner filter; a null owner means all
+     * owners, whose balances are summed per month. Loads only the tracked
+     * assets' amounts instead of every pivot row.
      *
      * @return Collection<int, self> oldest first
      */
-    public static function fromAllStatements(): Collection
+    public static function forOwnerFilter(?int $ownerId): Collection
     {
-        $asset = Asset::monthlyBalanceAsset();
+        $trackedAssets = Asset::monthlyBalanceAssets()
+            ->when($ownerId !== null, fn (Collection $assets): Collection => $assets->filter(fn (Asset $asset): bool => $asset->user_id === $ownerId));
 
-        if ($asset === null) {
+        if ($trackedAssets->isEmpty()) {
             return collect();
         }
 
-        $statements = Statement::with(['assets' => fn ($query) => $query->whereKey($asset->id)])->get();
+        $statements = Statement::query()
+            ->whereIn('user_id', $trackedAssets->keys())
+            ->with(['assets' => fn ($query) => $query->whereKey($trackedAssets->pluck('id'))])
+            ->get();
 
-        return self::fromStatements($statements, $asset);
+        $seriesByOwner = $trackedAssets
+            ->sortKeys()
+            ->map(fn (Asset $asset, int $userId): Collection => self::fromStatements($statements->where('user_id', $userId), $asset)
+                ->keyBy(fn (self $balance): string => substr($balance->date, 0, 7)));
+
+        if ($ownerId !== null) {
+            return $seriesByOwner->first()->values();
+        }
+
+        $trackedAssets->load('owner');
+
+        return self::combine($seriesByOwner, $trackedAssets->map(fn (Asset $asset): string => $asset->owner->name));
     }
 
     /**
@@ -46,7 +63,7 @@ class MonthlyBalanceData extends Data
      * it. The earliest statement has nothing to diff against, so it yields no
      * balance. Without an asset there is nothing to track.
      *
-     * @param  Collection<int, Statement>  $statements  with their assets loaded
+     * @param  Collection<int, Statement>  $statements  one owner's, with their assets loaded
      * @return Collection<int, self> oldest first
      */
     public static function fromStatements(Collection $statements, ?Asset $asset): Collection
@@ -65,6 +82,49 @@ class MonthlyBalanceData extends Data
                 note: $statement->note,
                 is_draft: $statement->is_draft,
             ))
+            ->values();
+    }
+
+    /**
+     * Sum every owner's balance per month. An owner is required from their
+     * first balance month onwards; a month is a draft while any required owner
+     * lacks a balance for it or has a draft one.
+     *
+     * @param  Collection<int, Collection<string, self>>  $seriesByOwner  each owner's balances keyed by 'YYYY-MM', keyed by owner id
+     * @param  Collection<int, string>  $ownerNames  keyed by owner id
+     * @return Collection<int, self> oldest first
+     */
+    private static function combine(Collection $seriesByOwner, Collection $ownerNames): Collection
+    {
+        $firstMonthByOwner = $seriesByOwner
+            ->reject(fn (Collection $series): bool => $series->isEmpty())
+            ->map(fn (Collection $series): string => $series->keys()->min());
+
+        return $seriesByOwner
+            ->flatMap(fn (Collection $series): array => $series->keys()->all())
+            ->unique()
+            ->sort()
+            ->map(function (string $month) use ($seriesByOwner, $firstMonthByOwner, $ownerNames): self {
+                $balances = $seriesByOwner
+                    ->map(fn (Collection $series): ?self => $series->get($month))
+                    ->filter();
+
+                $requiredOwnerIds = $firstMonthByOwner->filter(fn (string $firstMonth): bool => $firstMonth <= $month)->keys();
+
+                $note = $balances
+                    ->filter(fn (self $balance): bool => filled($balance->note))
+                    ->map(fn (self $balance, int $ownerId): string => $ownerNames[$ownerId].': '.$balance->note)
+                    ->implode(' · ');
+
+                return new self(
+                    date: $month.'-01',
+                    amount: (int) $balances->sum('amount'),
+                    note: $note === '' ? null : $note,
+                    is_draft: $requiredOwnerIds->contains(
+                        fn (int $ownerId): bool => ! $balances->has($ownerId) || $balances[$ownerId]->is_draft,
+                    ),
+                );
+            })
             ->values();
     }
 }

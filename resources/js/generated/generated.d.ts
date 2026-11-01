@@ -20,6 +20,7 @@ declare namespace App {
         namespace Finance {
             export type AssetData = {
                 id: number;
+                user_id: number;
                 name: string;
                 color: string | null;
                 tracks_monthly_balance: boolean;
@@ -40,6 +41,7 @@ declare namespace App {
             };
             export type ExpenseData = {
                 id: number;
+                user_id: number;
                 name: string;
                 color: string | null;
                 expense_category_id: number;
@@ -65,6 +67,21 @@ declare namespace App {
                 note: string | null;
                 is_draft: boolean;
             };
+            export type NetWorthMonthData = {
+                month: string;
+                statements: App.Data.Finance.StatementData[];
+                amounts: Record<number, number>;
+                total: number;
+                gain: number | null;
+                gain_percent: number | null;
+                is_draft: boolean;
+                is_complete: boolean;
+            };
+            export type OwnerData = {
+                id: number;
+                name: string;
+                color: string;
+            };
             export type PeriodAveragesData = {
                 last6: number | null;
                 last12: number | null;
@@ -73,6 +90,7 @@ declare namespace App {
             };
             export type StatementData = {
                 id: number;
+                user_id: number;
                 date: string;
                 amounts: Record<number, number>;
                 note: string | null;

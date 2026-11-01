@@ -7,15 +7,18 @@ use App\Data\Finance\MonthlyAverageData;
 use App\Data\Finance\MonthlyBalanceData;
 use App\Data\Finance\PeriodAveragesData;
 use App\Models\Finance\ExpenseCategory;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(): Response
+    public function __invoke(Request $request): Response
     {
-        $balances = MonthlyBalanceData::fromAllStatements()
+        $ownerFilter = $request->user()->financeOwnerFilter();
+
+        $balances = MonthlyBalanceData::forOwnerFilter($ownerFilter)
             ->reject(fn (MonthlyBalanceData $balance): bool => $balance->is_draft);
 
         $monthlyAverages = $balances
@@ -38,8 +41,8 @@ class DashboardController extends Controller
         ];
 
         $expenseCategories = ExpenseCategory::query()
-            ->whereHas('expenses')
-            ->with(['expenses' => fn ($query) => $query->orderByDesc('amount')->orderBy('name')])
+            ->whereHas('expenses', fn ($query) => $query->ownedBy($ownerFilter))
+            ->with(['expenses' => fn ($query) => $query->ownedBy($ownerFilter)->orderByDesc('amount')->orderBy('name')])
             ->orderBy('position')
             ->orderBy('name')
             ->get();

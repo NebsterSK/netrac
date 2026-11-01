@@ -2,6 +2,7 @@
 
 namespace App\Models\Finance;
 
+use App\Models\Concerns\HasOwner;
 use Database\Factories\Finance\ExpenseFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,11 +34,11 @@ use Illuminate\Support\Carbon;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['expense_category_id', 'name', 'color', 'amount'])]
+#[Fillable(['user_id', 'expense_category_id', 'name', 'color', 'amount'])]
 class Expense extends Model
 {
     /** @use HasFactory<ExpenseFactory> */
-    use HasFactory;
+    use HasFactory, HasOwner;
 
     /**
      * @return array<string, string>

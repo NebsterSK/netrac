@@ -9,6 +9,7 @@ use App\Http\Requests\Finance\ExpenseCategory\StoreExpenseCategoryRequest;
 use App\Http\Requests\Finance\ExpenseCategory\UpdateExpenseCategoryRequest;
 use App\Models\Finance\ExpenseCategory;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -17,9 +18,13 @@ use Throwable;
 
 class ExpenseCategoryController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $expenseCategories = ExpenseCategory::withCount('expenses')->orderBy('name')->get();
+        $ownerFilter = $request->user()->financeOwnerFilter();
+
+        $expenseCategories = ExpenseCategory::withCount(['expenses' => fn ($query) => $query->ownedBy($ownerFilter)])
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('finance/ExpenseCategory', [
             'categories' => ExpenseCategoryData::collect($expenseCategories),

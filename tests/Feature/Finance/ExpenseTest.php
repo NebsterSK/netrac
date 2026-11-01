@@ -2,6 +2,7 @@
 
 use App\Models\Finance\Expense;
 use App\Models\Finance\ExpenseCategory;
+use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 describe('access control', function () {
@@ -70,6 +71,37 @@ it('sorts expenses by category name', function () {
         ->assertInertia(fn (Assert $page) => $page->where('expenses.0.expenseCategory.name', 'Apex'));
 });
 
+it('respects the owner filter on the index', function () {
+    $other = User::factory()->create();
+    $viewer = verifiedUser(['finance_owner_id' => $other->id]);
+
+    Expense::factory()->for($other, 'owner')->create(['name' => 'Theirs']);
+    Expense::factory()->for($viewer, 'owner')->create(['name' => 'Mine']);
+
+    $this->actingAs($viewer)
+        ->get(route('finance.expenses.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('expenses', 1)
+            ->where('expenses.0.name', 'Theirs')
+            ->where('expenses.0.user_id', $other->id));
+});
+
+it('sorts expenses by owner name', function () {
+    $zed = User::factory()->create(['name' => 'Zed']);
+    $amy = User::factory()->create(['name' => 'Amy']);
+
+    Expense::factory()->for($zed, 'owner')->create(['name' => 'Z expense']);
+    Expense::factory()->for($amy, 'owner')->create(['name' => 'A expense']);
+
+    $this->actingAs(verifiedUser())
+        ->get(route('finance.expenses.index', ['sort' => 'owner']))
+        ->assertInertia(fn (Assert $page) => $page->where('expenses.0.name', 'A expense'));
+
+    $this->actingAs(verifiedUser())
+        ->get(route('finance.expenses.index', ['sort' => '-owner']))
+        ->assertInertia(fn (Assert $page) => $page->where('expenses.0.name', 'Z expense'));
+});
+
 it('rejects an invalid sort value', function () {
     $this->actingAs(verifiedUser())
         ->from(route('finance.expenses.index'))
@@ -79,9 +111,11 @@ it('rejects an invalid sort value', function () {
 
 it('stores an expense', function () {
     $category = ExpenseCategory::factory()->create();
+    $owner = verifiedUser();
 
-    $this->actingAs(verifiedUser())
+    $this->actingAs($owner)
         ->post(route('finance.expenses.store'), [
+            'user_id' => $owner->id,
             'expense_category_id' => $category->id,
             'name' => 'Electricity',
             'amount' => 120,
@@ -91,6 +125,7 @@ it('stores an expense', function () {
     $this->assertDatabaseHas('expenses', [
         'name' => 'Electricity',
         'expense_category_id' => $category->id,
+        'user_id' => $owner->id,
         'amount' => 120,
     ]);
 });
@@ -99,16 +134,18 @@ it('validates expense store input', function () {
     $this->actingAs(verifiedUser())
         ->from(route('finance.expenses.index'))
         ->post(route('finance.expenses.store'), ['expense_category_id' => 999, 'name' => '', 'amount' => 'abc'])
-        ->assertSessionHasErrors(['expense_category_id', 'name', 'amount']);
+        ->assertSessionHasErrors(['user_id', 'expense_category_id', 'name', 'amount']);
 });
 
 it('rejects a duplicate expense name', function () {
     $category = ExpenseCategory::factory()->create();
-    Expense::factory()->create(['name' => 'Netflix']);
+    $owner = verifiedUser();
+    Expense::factory()->create(['name' => 'Netflix', 'user_id' => $owner->id]);
 
-    $this->actingAs(verifiedUser())
+    $this->actingAs($owner)
         ->from(route('finance.expenses.index'))
         ->post(route('finance.expenses.store'), [
+            'user_id' => $owner->id,
             'expense_category_id' => $category->id,
             'name' => 'Netflix',
             'amount' => 13,
@@ -156,6 +193,7 @@ it('updates an expense', function () {
 
     $this->actingAs(verifiedUser())
         ->patch(route('finance.expenses.update', $expense), [
+            'user_id' => $expense->user_id,
             'expense_category_id' => $category->id,
             'name' => 'New',
             'amount' => 75,
@@ -180,9 +218,11 @@ it('deletes an expense', function () {
 describe('color', function () {
     it('stores an expense color', function () {
         $category = ExpenseCategory::factory()->create();
+        $owner = verifiedUser();
 
-        $this->actingAs(verifiedUser())
+        $this->actingAs($owner)
             ->post(route('finance.expenses.store'), [
+                'user_id' => $owner->id,
                 'expense_category_id' => $category->id,
                 'name' => 'Netflix',
                 'amount' => 14,
@@ -198,6 +238,7 @@ describe('color', function () {
 
         $this->actingAs(verifiedUser())
             ->put(route('finance.expenses.update', $expense), [
+                'user_id' => $expense->user_id,
                 'expense_category_id' => $expense->expense_category_id,
                 'name' => $expense->name,
                 'amount' => $expense->amount,
@@ -232,4 +273,58 @@ it('exposes expense colors on the dashboard', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->where('expenseCategories.0.color', '#3b82f6')
             ->where('expenseCategories.0.expenses.0.color', '#ef4444'));
+});
+
+describe('expense name uniqueness', function () {
+    it('allows the same name for different owners', function () {
+        $category = ExpenseCategory::factory()->create();
+        $owner = verifiedUser();
+        $other = verifiedUser();
+        Expense::factory()->create(['user_id' => $owner->id, 'expense_category_id' => $category->id, 'name' => 'Rent']);
+
+        $this->actingAs($owner)
+            ->post(route('finance.expenses.store'), [
+                'user_id' => $other->id,
+                'expense_category_id' => $category->id,
+                'name' => 'Rent',
+                'amount' => 500,
+            ])
+            ->assertSessionHasNoErrors();
+
+        expect(Expense::where('name', 'Rent')->count())->toBe(2);
+    });
+
+    it('rejects the same name for the same owner', function () {
+        $category = ExpenseCategory::factory()->create();
+        $owner = verifiedUser();
+        Expense::factory()->create(['user_id' => $owner->id, 'expense_category_id' => $category->id, 'name' => 'Rent']);
+
+        $this->actingAs($owner)
+            ->post(route('finance.expenses.store'), [
+                'user_id' => $owner->id,
+                'expense_category_id' => $category->id,
+                'name' => 'Rent',
+                'amount' => 500,
+            ])
+            ->assertSessionHasErrors('name');
+    });
+
+    it('rejects renaming to a name the same owner already has but allows keeping its own', function () {
+        $category = ExpenseCategory::factory()->create();
+        $owner = verifiedUser();
+        $other = verifiedUser();
+        Expense::factory()->create(['user_id' => $owner->id, 'expense_category_id' => $category->id, 'name' => 'Rent']);
+        Expense::factory()->create(['user_id' => $other->id, 'expense_category_id' => $category->id, 'name' => 'Water']);
+        $water = Expense::factory()->create(['user_id' => $owner->id, 'expense_category_id' => $category->id, 'name' => 'Water']);
+
+        $payload = ['user_id' => $owner->id, 'expense_category_id' => $category->id, 'amount' => 5];
+
+        $this->actingAs($owner)
+            ->put(route('finance.expenses.update', $water), [...$payload, 'name' => 'Rent'])
+            ->assertSessionHasErrors('name');
+
+        $this->actingAs($owner)
+            ->put(route('finance.expenses.update', $water), [...$payload, 'name' => 'Water'])
+            ->assertSessionHasNoErrors();
+    });
 });

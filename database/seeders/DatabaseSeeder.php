@@ -21,6 +21,13 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Lukas',
             'email' => 'lukas@example.com',
+            'color' => '#3b82f6',
+        ]);
+
+        User::factory()->create([
+            'name' => 'Lucka',
+            'email' => 'lucka@example.com',
+            'color' => '#ec4899',
         ]);
 
         $this->call(MonthlyBalanceSeeder::class);

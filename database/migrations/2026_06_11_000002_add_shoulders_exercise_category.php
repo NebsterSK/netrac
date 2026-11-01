@@ -21,9 +21,4 @@ return new class extends Migration
             'updated_at' => $timestamp,
         ]);
     }
-
-    public function down(): void
-    {
-        DB::table('exercise_categories')->where('name', 'Shoulders')->delete();
-    }
 };

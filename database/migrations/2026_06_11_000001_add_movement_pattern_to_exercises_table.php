@@ -12,11 +12,4 @@ return new class extends Migration
             $table->string('movement_pattern')->nullable()->after('name');
         });
     }
-
-    public function down(): void
-    {
-        Schema::table('exercises', function (Blueprint $table) {
-            $table->dropColumn('movement_pattern');
-        });
-    }
 };

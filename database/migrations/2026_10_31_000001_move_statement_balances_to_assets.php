@@ -71,34 +71,4 @@ return new class extends Migration
             $table->dropColumn(array_column($this->assets, 'column'));
         });
     }
-
-    /**
-     * Reverse the migrations.
-     *
-     * Restores the hardcoded columns from the original six assets. Amounts of
-     * assets added later are lost.
-     */
-    public function down(): void
-    {
-        Schema::table('statements', function (Blueprint $table) {
-            foreach (array_reverse($this->assets) as $asset) {
-                $table->integer($asset['column'])->after('date');
-            }
-        });
-
-        foreach ($this->assets as $asset) {
-            $assetId = DB::table('assets')->where('name', $asset['name'])->value('id');
-
-            if ($assetId === null) {
-                continue;
-            }
-
-            DB::table('statements')->update([
-                $asset['column'] => DB::raw('coalesce((select amount from asset_statement where asset_statement.statement_id = statements.id and asset_statement.asset_id = '.(int) $assetId.'), 0)'),
-            ]);
-        }
-
-        Schema::dropIfExists('asset_statement');
-        Schema::dropIfExists('assets');
-    }
 };

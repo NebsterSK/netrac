@@ -22,12 +22,4 @@ return new class extends Migration
             $table->unique(['workout_session_id', 'exercise_id']);
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('exercise_workout_session');
-    }
 };
