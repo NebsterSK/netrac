@@ -8,6 +8,7 @@ use Database\Seeders\Finance\ExpenseSeeder;
 use Database\Seeders\Finance\MonthlyBalanceSeeder;
 use Database\Seeders\Finance\StatementSeeder;
 use Database\Seeders\Health\ExerciseSeeder;
+use Database\Seeders\Health\WeightSeeder;
 use Database\Seeders\Health\WorkoutSessionSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -34,6 +35,7 @@ class DatabaseSeeder extends Seeder
         $this->call(StatementSeeder::class);
         $this->call(ExpenseSeeder::class);
         $this->call(ExerciseSeeder::class);
+        $this->call(WeightSeeder::class);
         $this->call(WeekSeeder::class);
         //        $this->call(WorkoutSessionSeeder::class);
     }

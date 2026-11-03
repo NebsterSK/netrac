@@ -8,6 +8,7 @@ import {
     Landmark,
     LayoutGrid,
     Receipt,
+    Scale,
     Tags,
     TrendingUp,
     Wallet,
@@ -35,6 +36,7 @@ import netWorth from '@/routes/finance/net-worth';
 import exerciseCategories from '@/routes/health/exercise-categories';
 import exercises from '@/routes/health/exercises';
 import sessions from '@/routes/health/sessions';
+import weights from '@/routes/health/weights';
 import type { NavGroup, NavItem } from '@/types';
 
 const mainNavGroups: NavGroup[] = [
@@ -72,20 +74,25 @@ const mainNavGroups: NavGroup[] = [
                 icon: Landmark,
             },
             {
-                title: 'Expenses',
-                href: expenses.index(),
-                icon: Receipt,
-            },
-            {
                 title: 'Expense Categories',
                 href: expenseCategories.index(),
                 icon: FolderTree,
+            },
+            {
+                title: 'Expenses',
+                href: expenses.index(),
+                icon: Receipt,
             },
         ],
     },
     {
         label: 'Health',
         items: [
+            {
+                title: 'Weight',
+                href: weights.index(),
+                icon: Scale,
+            },
             {
                 title: 'Exercise Categories',
                 href: exerciseCategories.index(),

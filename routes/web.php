@@ -12,6 +12,7 @@ use App\Http\Controllers\Finance\OwnerFilterController;
 use App\Http\Controllers\Health\ExerciseCategoryController;
 use App\Http\Controllers\Health\ExerciseController;
 use App\Http\Controllers\Health\SessionController;
+use App\Http\Controllers\Health\WeightController;
 use App\Models\Health\WorkoutSession;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix('health')->name('health.')->group(function () {
+        Route::resource('/weights', WeightController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('/exercises', ExerciseController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('/exercise-categories', ExerciseCategoryController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['exercise-categories' => 'exerciseCategory']);
         Route::patch('/exercise-categories/{exerciseCategory}/priority', [ExerciseCategoryController::class, 'updatePriority'])->name('exercise-categories.priority.update');

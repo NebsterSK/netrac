@@ -129,6 +129,11 @@ declare namespace App {
                 total: number;
                 completed: number;
             };
+            export type WeightData = {
+                id: number;
+                date: string;
+                weight: number;
+            };
         }
     }
     namespace Enums {
