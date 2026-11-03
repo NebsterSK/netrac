@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Buzerlistok\Week;
 use App\Models\Finance\Asset;
 use App\Models\Finance\Expense;
 use App\Models\Finance\ExpenseCategory;
@@ -24,8 +25,25 @@ describe('access control', function () {
                 ->component('Dashboard')
                 ->has('monthlyAverages')
                 ->has('periodAverages')
-                ->has('expenseCategories'));
+                ->has('expenseCategories')
+                ->has('buzerlistokWeeks'));
     });
+});
+
+it('sends the latest 10 Buzerlistok weeks oldest first, with goals and marks', function () {
+    $latestStart = now()->startOfWeek();
+
+    foreach (range(0, 11) as $weeksAgo) {
+        Week::factory()->create(['starts_on' => $latestStart->copy()->subWeeks($weeksAgo)->toDateString()]);
+    }
+
+    $this->actingAs($this->owner)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('buzerlistokWeeks', 10)
+            ->where('buzerlistokWeeks.0.starts_on', $latestStart->copy()->subWeeks(9)->toDateString())
+            ->where('buzerlistokWeeks.9.starts_on', $latestStart->toDateString())
+            ->has('buzerlistokWeeks.9.goals'));
 });
 
 it('reports null period averages with no balances', function () {

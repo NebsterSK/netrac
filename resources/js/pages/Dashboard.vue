@@ -3,6 +3,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { useEventListener } from '@vueuse/core';
 import { GripVertical } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import BuzerlistokRateChart from '@/components/BuzerlistokRateChart.vue';
 import ExpenseDoughnut from '@/components/ExpenseDoughnut.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -28,6 +29,7 @@ const props = defineProps<{
     monthlyAverages: MonthlyAverage[];
     periodAverages: PeriodAverages;
     expenseCategories: ExpenseCategoryBreakdown[];
+    buzerlistokWeeks: App.Data.Buzerlistok.WeekData[];
 }>();
 
 const { resolvedAppearance } = useAppearance();
@@ -335,6 +337,16 @@ const periods = computed(() => [
                                 </Tooltip>
                             </TooltipProvider>
                         </div>
+                    </CardContent>
+                </Card>
+
+                <Card class="h-64 md:aspect-video md:h-auto">
+                    <CardHeader>
+                        <CardTitle>Buzerlistok Success Rate</CardTitle>
+                    </CardHeader>
+
+                    <CardContent class="min-h-0 flex-1">
+                        <BuzerlistokRateChart :weeks="buzerlistokWeeks" />
                     </CardContent>
                 </Card>
             </div>

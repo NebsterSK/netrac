@@ -28,6 +28,11 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import WeekStartPicker from '@/components/WeekStartPicker.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    successRateColor,
+    todayString,
+    weekSuccessRate as successRateOn,
+} from '@/lib/buzerlistok';
 import { dashboard } from '@/routes';
 import buzerlistok from '@/routes/buzerlistok';
 import marks from '@/routes/buzerlistok/goals/marks';
@@ -149,14 +154,6 @@ function markFor(goalId: number, date: string): Mark | undefined {
 
 type DayStatus = 'success' | 'fail';
 
-function todayString(): string {
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const date = String(now.getDate()).padStart(2, '0');
-
-    return `${now.getFullYear()}-${month}-${date}`;
-}
-
 const today = ref(todayString());
 
 useIntervalFn(() => {
@@ -187,42 +184,8 @@ function dayStatus(week: Week, date: string): DayStatus | null {
     return date < today.value ? 'fail' : null;
 }
 
-/**
- * Share of goal-days that succeeded (success or partial), rounded to a whole
- * percent. Past days count every goal, so an unmarked one counts as missed;
- * today counts only what is already marked; future days are left out. Null
- * when nothing counts yet.
- */
 function weekSuccessRate(week: Week): number | null {
-    let counted = 0;
-    let succeeded = 0;
-
-    for (const date of week.days) {
-        if (date > today.value) {
-            continue;
-        }
-
-        for (const goal of week.goals) {
-            const status = markFor(goal.id, date)?.status;
-
-            if (date === today.value && status === undefined) {
-                continue;
-            }
-
-            counted++;
-
-            if (status === 'success' || status === 'partial') {
-                succeeded++;
-            }
-        }
-    }
-
-    return counted === 0 ? null : Math.round((succeeded / counted) * 100);
-}
-
-/** Red at 0 %, through yellow, to green at 100 %. */
-function successRateColor(rate: number): string {
-    return `hsl(${Math.round(rate * 1.2)} 75% 50%)`;
+    return successRateOn(week, today.value);
 }
 
 // Dates run newest-first down each table.

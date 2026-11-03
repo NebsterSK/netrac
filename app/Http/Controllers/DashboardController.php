@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Buzerlistok\WeekData;
 use App\Data\Finance\ExpenseCategoryBreakdownData;
 use App\Data\Finance\MonthlyAverageData;
 use App\Data\Finance\MonthlyBalanceData;
 use App\Data\Finance\PeriodAveragesData;
+use App\Models\Buzerlistok\Week;
 use App\Models\Finance\ExpenseCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -14,6 +16,9 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    /** How many of the latest Buzerlistok weeks the success-rate chart shows. */
+    private const int BUZERLISTOK_CHART_WEEKS = 10;
+
     public function __invoke(Request $request): Response
     {
         $ownerFilter = $request->user()->financeOwnerFilter();
@@ -47,12 +52,21 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
+        $buzerlistokWeeks = Week::with('goals.marks')
+            ->orderByDesc('starts_on')
+            ->limit(self::BUZERLISTOK_CHART_WEEKS)
+            ->get()
+            ->reverse()
+            ->map(fn (Week $week): WeekData => WeekData::fromWeek($week))
+            ->values();
+
         return Inertia::render('Dashboard', [
             'monthlyAverages' => MonthlyAverageData::collect($monthlyAverages),
             'periodAverages' => PeriodAveragesData::from($periodAverages),
             'expenseCategories' => $expenseCategories
                 ->map(fn (ExpenseCategory $category): ExpenseCategoryBreakdownData => ExpenseCategoryBreakdownData::fromCategory($category))
                 ->values(),
+            'buzerlistokWeeks' => $buzerlistokWeeks,
         ]);
     }
 }
