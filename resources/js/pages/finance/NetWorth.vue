@@ -125,13 +125,9 @@ const columns = computed(() =>
 
 type Column = (typeof columns.value)[number];
 
-/** Asset names can repeat across owners; those get the owner's name appended in the chart. */
+/** Under All the chart names each asset's owner, like the table header's badge. */
 function chartLabel(col: Column): string {
-    const isAmbiguous = columns.value.some(
-        (other) => other.id !== col.id && other.label === col.label,
-    );
-
-    return isAmbiguous && col.owner
+    return isAllOwners.value && col.owner
         ? `${col.label} (${col.owner.name})`
         : col.label;
 }
@@ -217,6 +213,13 @@ function onColumnDragEnd() {
 
 /** Months oldest first. */
 const sortedMonths = computed(() => [...props.months].reverse());
+
+/** The chart shows only the most recent months; the table keeps all of them. */
+const CHART_MONTH_LIMIT = 18;
+
+const chartMonths = computed(() =>
+    sortedMonths.value.slice(-CHART_MONTH_LIMIT),
+);
 
 /** Every loaded statement, oldest first. */
 const allStatements = computed(() =>
@@ -690,7 +693,7 @@ function isProvisional(month: Month | undefined): boolean {
 }
 
 const chartData = computed(() => {
-    const sorted = sortedMonths.value;
+    const sorted = chartMonths.value;
     const labels = sorted.map((month) => {
         const [year, monthNumber] = month.month.split('-').map(Number);
         const date = new Date(year, monthNumber - 1);
@@ -774,7 +777,7 @@ const chartOptions = computed(() => {
                 reverse: true,
                 callbacks: {
                     title: (items: TooltipItem<'line'>[]) => {
-                        const month = sortedMonths.value[items[0].dataIndex];
+                        const month = chartMonths.value[items[0].dataIndex];
                         const [year, monthNumber] = month.month
                             .split('-')
                             .map(Number);
@@ -850,8 +853,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     <Head title="Net Worth" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[4fr_6fr]">
-            <Card class="min-w-0 self-start">
+        <div
+            class="flex flex-col gap-4 p-4 lg:flex-row lg:flex-wrap lg:items-start"
+        >
+            <Card class="min-w-0 lg:max-w-full lg:flex-none">
                 <CardHeader>
                     <CardTitle class="leading-8">Table</CardTitle>
 
@@ -1527,7 +1532,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </CardContent>
             </Card>
 
-            <Card class="sticky top-0 h-[90vh] self-start">
+            <Card class="sticky top-0 h-[90vh] lg:min-w-md lg:flex-1">
                 <CardHeader>
                     <CardTitle>Chart</CardTitle>
                 </CardHeader>

@@ -354,7 +354,7 @@ describe('owners', function () {
         expect($statement->refresh()->user_id)->toBe($this->owner->id);
     });
 
-    it("rejects moving a statement into a month its owner already has", function () {
+    it('rejects moving a statement into a month its owner already has', function () {
         Statement::factory()->for($this->owner, 'owner')->create(['date' => '2024-05-01']);
         $statement = Statement::factory()->for($this->owner, 'owner')->create(['date' => '2024-04-01']);
 
