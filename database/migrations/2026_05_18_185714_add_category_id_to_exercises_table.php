@@ -15,14 +15,4 @@ return new class extends Migration
             $table->foreignId('category_id')->nullable(false)->after('id')->constrained()->cascadeOnUpdate()->cascadeOnDelete();
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('exercises', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('category_id');
-        });
-    }
 };

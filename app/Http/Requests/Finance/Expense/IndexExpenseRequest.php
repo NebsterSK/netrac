@@ -22,6 +22,7 @@ class IndexExpenseRequest extends FormRequest
                 'created_at', '-created_at',
                 'updated_at', '-updated_at',
                 'category', '-category',
+                'owner', '-owner',
             ])],
             'page' => ['nullable', 'integer', 'min:1'],
         ];

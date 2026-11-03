@@ -16,15 +16,4 @@ return new class extends Migration
             $table->renameColumn('uniqua_dds', 'uniqa_dds');
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('statements', function (Blueprint $table) {
-            $table->renameColumn('uniqa_sds', 'uniqua_sds');
-            $table->renameColumn('uniqa_dds', 'uniqua_dds');
-        });
-    }
 };

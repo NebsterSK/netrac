@@ -4,13 +4,14 @@ namespace Database\Seeders\Finance;
 
 use App\Models\Finance\Expense;
 use App\Models\Finance\ExpenseCategory;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class ExpenseSeeder extends Seeder
 {
     public function run(): void
     {
-        $expensesByCategory = [
+        $this->seedExpenses(User::where('email', 'lukas@example.com')->firstOrFail(), [
             'Subscriptions' => [
                 'Netflix' => 14,
                 'Spotify' => 11,
@@ -30,8 +31,28 @@ class ExpenseSeeder extends Seeder
                 'Car insurance' => 45,
                 'Public transport' => 30,
             ],
-        ];
+        ]);
 
+        $this->seedExpenses(User::where('email', 'lucka@example.com')->firstOrFail(), [
+            'Subscriptions' => [
+                'Netflix' => 14,
+                'Spotify' => 11,
+            ],
+            'Housing' => [
+                'Rent' => 400,
+                'Internet' => 30,
+            ],
+            'Transport' => [
+                'Public transport' => 30,
+            ],
+        ]);
+    }
+
+    /**
+     * @param  array<string, array<string, int>>  $expensesByCategory
+     */
+    private function seedExpenses(User $user, array $expensesByCategory): void
+    {
         $position = 0;
 
         foreach ($expensesByCategory as $categoryName => $expenses) {
@@ -39,7 +60,7 @@ class ExpenseSeeder extends Seeder
 
             foreach ($expenses as $name => $amount) {
                 Expense::firstOrCreate(
-                    ['expense_category_id' => $category->id, 'name' => $name],
+                    ['user_id' => $user->id, 'expense_category_id' => $category->id, 'name' => $name],
                     ['amount' => $amount],
                 );
             }

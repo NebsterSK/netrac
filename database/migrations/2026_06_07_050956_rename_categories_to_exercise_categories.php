@@ -18,17 +18,4 @@ return new class extends Migration
             $table->renameColumn('category_id', 'exercise_category_id');
         });
     }
-
-    public function down(): void
-    {
-        Schema::table('exercises', function (Blueprint $table) {
-            $table->renameColumn('exercise_category_id', 'category_id');
-        });
-
-        Schema::table('exercise_categories', function (Blueprint $table) {
-            $table->dropColumn('priority');
-        });
-
-        Schema::rename('exercise_categories', 'categories');
-    }
 };

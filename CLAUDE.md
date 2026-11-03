@@ -6,7 +6,7 @@ See `README.md` for project overview, stack, setup, and architecture.
 
 - Don't edit the `laravel-boost-guidelines` section (auto-generated).
 - Run `php`, `composer`, `npm` via the `.bash_profile` aliases.
-- Single-user app — don't scope data by `user_id`.
+- Two users (Lukas, Lucka) with no roles or permissions: each can view and edit all data. Finance assets, expenses and statements have a required owner (`user_id`, `HasOwner` trait); filter them with `->ownedBy($user->financeOwnerFilter())`, where null means All. Expense categories and Health/Buzerlistok data are shared and have no owner. Registration is off; create accounts with `php artisan user:create`.
 - No single-letter variable names; use short, readable names.
 - Don't use the American date format (MM/DD/YYYY); use 24-hour time, not AM/PM.
 
@@ -28,6 +28,8 @@ See `README.md` for project overview, stack, setup, and architecture.
 
 - Don't reference enums, models, or app classes in migrations.
 - Hardcode seeded values; use `DB::table(...)`, not Eloquent models.
+- Every foreign key uses `cascadeOnUpdate()->cascadeOnDelete()` (exception: nullable 'pointer' columns like `users.finance_owner_id` use `nullOnDelete()`).
+- Forward-only: don't write `down()` methods. Fix a bad migration with a new migration, not a rollback.
 
 ### Index / listing pages
 

@@ -17,9 +17,16 @@ const PRESET_COLORS = [
 
 const model = defineModel<string | null>({ required: true });
 
-defineProps<{
-    id?: string;
-}>();
+withDefaults(
+    defineProps<{
+        id?: string;
+        allowAutomatic?: boolean;
+    }>(),
+    {
+        id: undefined,
+        allowAutomatic: true,
+    },
+);
 
 const isCustom = computed(
     () => model.value !== null && !PRESET_COLORS.includes(model.value),
@@ -33,6 +40,7 @@ function updateCustom(event: Event) {
 <template>
     <div :id="id" class="flex flex-wrap items-center gap-2" role="radiogroup">
         <button
+            v-if="allowAutomatic"
             type="button"
             role="radio"
             :aria-checked="model === null"

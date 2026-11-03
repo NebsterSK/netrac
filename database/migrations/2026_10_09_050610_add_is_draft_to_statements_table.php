@@ -15,14 +15,4 @@ return new class extends Migration
             $table->boolean('is_draft')->default(false)->after('trading212');
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('statements', function (Blueprint $table) {
-            $table->dropColumn('is_draft');
-        });
-    }
 };

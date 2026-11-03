@@ -4,6 +4,8 @@ import { EllipsisVertical, Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import ColorPicker from '@/components/ColorPicker.vue';
 import InputError from '@/components/InputError.vue';
+import OwnerBadge from '@/components/OwnerBadge.vue';
+import OwnerSelect from '@/components/OwnerSelect.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +32,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { useOwners } from '@/composables/useOwners';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { destroy, index, store, update } from '@/routes/finance/assets';
@@ -44,8 +47,14 @@ defineProps<{
 const showDialog = ref(false);
 const editingAsset = ref<Asset | null>(null);
 const isEditing = computed(() => editingAsset.value !== null);
+const ownerLocked = computed(
+    () => (editingAsset.value?.statements_count ?? 0) > 0,
+);
+
+const { ownerById, defaultOwnerId } = useOwners();
 
 const form = useForm({
+    user_id: null as number | null,
     name: '',
     color: null as string | null,
     tracks_monthly_balance: false,
@@ -54,12 +63,14 @@ const form = useForm({
 function openCreate() {
     editingAsset.value = null;
     form.reset();
+    form.user_id = defaultOwnerId.value;
     form.clearErrors();
     showDialog.value = true;
 }
 
 function openEdit(asset: Asset) {
     editingAsset.value = asset;
+    form.user_id = asset.user_id;
     form.name = asset.name;
     form.color = asset.color;
     form.tracks_monthly_balance = asset.tracks_monthly_balance;
@@ -189,6 +200,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                                         {{ asset.name }}
 
+                                        <OwnerBadge
+                                            v-if="ownerById(asset.user_id)"
+                                            :owner="ownerById(asset.user_id)!"
+                                        />
+
                                         <Badge
                                             v-if="asset.tracks_monthly_balance"
                                             variant="outline"
@@ -269,6 +285,26 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </div>
 
                         <div class="space-y-2">
+                            <Label for="asset-owner">Owner</Label>
+
+                            <OwnerSelect
+                                id="asset-owner"
+                                v-model="form.user_id"
+                                :disabled="ownerLocked"
+                            />
+
+                            <p
+                                v-if="ownerLocked"
+                                class="text-xs text-muted-foreground"
+                            >
+                                The owner can't change because this asset is
+                                used in statements.
+                            </p>
+
+                            <InputError :message="form.errors.user_id" />
+                        </div>
+
+                        <div class="space-y-2">
                             <Label>Color</Label>
 
                             <ColorPicker v-model="form.color" />
@@ -296,8 +332,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                             <p class="text-xs text-muted-foreground">
                                 The monthly balance is this asset's change since
-                                the previous statement. Only one asset can drive
-                                it.
+                                the previous statement. Only one asset per owner
+                                can drive it.
                             </p>
 
                             <InputError

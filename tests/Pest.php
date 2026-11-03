@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Finance\Asset;
+use App\Models\Finance\Statement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
@@ -33,4 +35,17 @@ pest()->extend(TestCase::class)
 function verifiedUser(array $attributes = []): User
 {
     return User::factory()->create($attributes);
+}
+
+/**
+ * A statement of the owner's that records the amount in the asset.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function balanceStatement(User $owner, Asset $asset, string $date, int $amount, array $attributes = []): Statement
+{
+    return Statement::factory()
+        ->for($owner, 'owner')
+        ->withAmount($asset, $amount)
+        ->create(['date' => $date, ...$attributes]);
 }

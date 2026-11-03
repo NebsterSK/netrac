@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Data\Finance\OwnerData;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,6 +43,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'owners' => fn () => $request->user() ? OwnerData::collect(User::select('id', 'name', 'color')->orderBy('id')->get()) : [],
+            'ownerFilter' => fn () => $request->user()?->financeOwnerFilter(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => fn () => [
                 'success' => $request->session()->get('success'),

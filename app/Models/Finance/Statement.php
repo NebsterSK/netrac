@@ -2,6 +2,7 @@
 
 namespace App\Models\Finance;
 
+use App\Models\Concerns\HasOwner;
 use Database\Factories\Finance\StatementFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
@@ -13,6 +14,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property Carbon $date
+ * @property-read string $month 'YYYY-MM', generated from the date
  * @property string|null $note
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -32,11 +34,11 @@ use Illuminate\Support\Carbon;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['date', 'note', 'is_draft'])]
+#[Fillable(['user_id', 'date', 'note', 'is_draft'])]
 class Statement extends Model
 {
     /** @use HasFactory<StatementFactory> */
-    use HasFactory;
+    use HasFactory, HasOwner;
 
     protected function casts(): array
     {

@@ -22,12 +22,4 @@ return new class extends Migration
             $table->unique(['goal_id', 'marked_on']);
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('buzerlistok_marks');
-    }
 };

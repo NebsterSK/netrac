@@ -20,6 +20,8 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            owners: App.Data.Finance.OwnerData[];
+            ownerFilter: number | null;
             [key: string]: unknown;
         };
     }

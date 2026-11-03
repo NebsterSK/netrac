@@ -13,8 +13,9 @@ class UpdateExpenseRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'user_id' => ['required', 'integer', 'exists:users,id'],
             'expense_category_id' => ['required', 'integer', 'exists:expense_categories,id'],
-            'name' => ['required', 'string', 'max:255', Rule::unique('expenses', 'name')->ignore($this->route('expense'))],
+            'name' => ['required', 'string', 'max:255', Rule::unique('expenses', 'name')->where('user_id', $this->input('user_id'))->ignore($this->route('expense'))],
             'amount' => ['required', 'integer', 'min:0'],
             'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ];

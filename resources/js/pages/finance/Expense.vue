@@ -17,6 +17,8 @@ import {
 import { computed, ref } from 'vue';
 import ColorPicker from '@/components/ColorPicker.vue';
 import InputError from '@/components/InputError.vue';
+import OwnerBadge from '@/components/OwnerBadge.vue';
+import OwnerSelect from '@/components/OwnerSelect.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,6 +52,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { useOwners } from '@/composables/useOwners';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { destroy, index, store, update } from '@/routes/finance/expenses';
@@ -194,7 +197,10 @@ const showDialog = ref(false);
 const editingExpense = ref<Expense | null>(null);
 const isEditing = computed(() => editingExpense.value !== null);
 
+const { ownerById, defaultOwnerId } = useOwners();
+
 const form = useForm({
+    user_id: null as number | null,
     name: '',
     expense_category_id: '' as string,
     amount: '' as string,
@@ -204,12 +210,14 @@ const form = useForm({
 function openCreate() {
     editingExpense.value = null;
     form.reset();
+    form.user_id = defaultOwnerId.value;
     form.clearErrors();
     showDialog.value = true;
 }
 
 function openEdit(expense: Expense) {
     editingExpense.value = expense;
+    form.user_id = expense.user_id;
     form.name = expense.name;
     form.expense_category_id = String(expense.expense_category_id);
     form.amount = String(expense.amount);
@@ -226,6 +234,7 @@ function submitForm() {
     const method = isEditing.value ? 'put' : 'post';
 
     form.transform((data) => ({
+        user_id: data.user_id,
         name: data.name,
         expense_category_id: data.expense_category_id
             ? Number(data.expense_category_id)
@@ -382,6 +391,23 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         type="button"
                                         class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
                                         :disabled="loading"
+                                        @click="toggleSort('owner')"
+                                    >
+                                        Owner
+                                        <component
+                                            :is="sortIcon('owner')"
+                                            class="size-3.5"
+                                        />
+                                    </button>
+                                </th>
+
+                                <th
+                                    class="hidden px-2 py-2 font-medium sm:table-cell sm:px-4"
+                                >
+                                    <button
+                                        type="button"
+                                        class="inline-flex cursor-pointer items-center gap-1 hover:text-foreground disabled:cursor-default"
+                                        :disabled="loading"
                                         @click="toggleSort('category')"
                                     >
                                         Category
@@ -450,7 +476,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <tbody :class="loading ? 'opacity-60' : ''">
                             <tr v-if="expenses.length === 0">
                                 <td
-                                    colspan="6"
+                                    colspan="7"
                                     class="px-4 py-6 text-center text-muted-foreground"
                                 >
                                     No expenses found.
@@ -479,12 +505,30 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         {{ expense.name }}
                                     </span>
 
-                                    <Badge
-                                        variant="secondary"
-                                        class="mt-1 ml-4.5 text-xs sm:hidden"
+                                    <span
+                                        class="mt-1 ml-4.5 flex flex-wrap items-center gap-1 sm:hidden"
                                     >
-                                        {{ expense.expenseCategory.name }}
-                                    </Badge>
+                                        <OwnerBadge
+                                            v-if="ownerById(expense.user_id)"
+                                            :owner="ownerById(expense.user_id)!"
+                                        />
+
+                                        <Badge
+                                            variant="secondary"
+                                            class="text-xs"
+                                        >
+                                            {{ expense.expenseCategory.name }}
+                                        </Badge>
+                                    </span>
+                                </td>
+
+                                <td
+                                    class="hidden px-2 py-3 sm:table-cell sm:px-4"
+                                >
+                                    <OwnerBadge
+                                        v-if="ownerById(expense.user_id)"
+                                        :owner="ownerById(expense.user_id)!"
+                                    />
                                 </td>
 
                                 <td
@@ -629,6 +673,17 @@ const breadcrumbs: BreadcrumbItem[] = [
                             />
 
                             <InputError :message="form.errors.name" />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label for="expense-owner">Owner</Label>
+
+                            <OwnerSelect
+                                id="expense-owner"
+                                v-model="form.user_id"
+                            />
+
+                            <InputError :message="form.errors.user_id" />
                         </div>
 
                         <div class="space-y-2">

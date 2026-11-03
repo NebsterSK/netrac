@@ -23,14 +23,4 @@ return new class extends Migration
                 ->where('id', $id)
                 ->update(['position' => $index + 1]));
     }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('expense_categories', function (Blueprint $table) {
-            $table->dropColumn('position');
-        });
-    }
 };

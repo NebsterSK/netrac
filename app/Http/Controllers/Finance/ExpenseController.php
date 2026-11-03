@@ -10,6 +10,7 @@ use App\Http\Requests\Finance\Expense\StoreExpenseRequest;
 use App\Http\Requests\Finance\Expense\UpdateExpenseRequest;
 use App\Models\Finance\Expense;
 use App\Models\Finance\ExpenseCategory;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +25,7 @@ class ExpenseController extends Controller
 {
     public function index(IndexExpenseRequest $request): Response
     {
-        $expenses = QueryBuilder::for(Expense::class)
+        $expenses = QueryBuilder::for(Expense::query()->ownedBy($request->user()->financeOwnerFilter()))
             ->allowedFilters(
                 AllowedFilter::partial('name'),
                 AllowedFilter::exact('expense_category_id'),
@@ -34,6 +35,14 @@ class ExpenseController extends Controller
                 'amount',
                 'created_at',
                 'updated_at',
+                AllowedSort::callback('owner', function (Builder $query, bool $descending): void {
+                    $query->orderBy(
+                        User::query()
+                            ->select('name')
+                            ->whereColumn('users.id', 'expenses.user_id'),
+                        $descending ? 'desc' : 'asc',
+                    );
+                }),
                 AllowedSort::callback('category', function (Builder $query, bool $descending): void {
                     $query->orderBy(
                         ExpenseCategory::query()

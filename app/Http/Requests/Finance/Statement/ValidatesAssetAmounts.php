@@ -3,13 +3,15 @@
 namespace App\Http\Requests\Finance\Statement;
 
 use App\Models\Finance\Asset;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
- * A statement records one amount for every asset, keyed by asset id.
+ * A statement records one amount for every asset of its owner, keyed by asset id.
  */
 trait ValidatesAssetAmounts
 {
+    abstract protected function statementOwnerId(): ?int;
+
     /** @var Collection<int, Asset>|null */
     private ?Collection $assets = null;
 
@@ -18,7 +20,11 @@ trait ValidatesAssetAmounts
      */
     private function assets(): Collection
     {
-        return $this->assets ??= Asset::orderBy('name')->get();
+        $ownerId = $this->statementOwnerId();
+
+        return $this->assets ??= $ownerId === null
+            ? new Collection
+            : Asset::query()->ownedBy($ownerId)->orderBy('name')->get();
     }
 
     /**
@@ -26,6 +32,10 @@ trait ValidatesAssetAmounts
      */
     protected function amountRules(): array
     {
+        if ($this->statementOwnerId() === null) {
+            return ['amounts' => ['present', 'array']];
+        }
+
         $assetIds = $this->assets()->pluck('id');
 
         $rules = [

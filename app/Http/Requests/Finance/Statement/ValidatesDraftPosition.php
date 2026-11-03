@@ -7,10 +7,13 @@ use Illuminate\Support\Carbon;
 use Illuminate\Validation\Validator;
 
 /**
- * Keeps a draft as the single latest statement: at most one draft, dated after every real statement.
+ * Keeps a draft as an owner's single latest statement: at most one draft per
+ * owner, dated after every real statement of that owner.
  */
 trait ValidatesDraftPosition
 {
+    abstract protected function statementOwnerId(): ?int;
+
     /**
      * @return array<int, callable>
      */
@@ -26,6 +29,7 @@ trait ValidatesDraftPosition
                 $currentStatement = $this->route('statement');
 
                 $otherStatements = Statement::query()
+                    ->ownedBy($this->statementOwnerId())
                     ->when($currentStatement instanceof Statement, fn ($query) => $query->whereKeyNot($currentStatement->getKey()));
 
                 if ($this->boolean('is_draft')) {

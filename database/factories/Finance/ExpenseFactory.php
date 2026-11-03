@@ -4,6 +4,7 @@ namespace Database\Factories\Finance;
 
 use App\Models\Finance\Expense;
 use App\Models\Finance\ExpenseCategory;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,6 +20,7 @@ class ExpenseFactory extends Factory
     public function definition(): array
     {
         return [
+            'user_id' => User::factory(),
             'expense_category_id' => ExpenseCategory::factory(),
             'name' => fake()->unique()->words(asText: true),
             'amount' => fake()->numberBetween(5, 2000),

@@ -2,6 +2,7 @@
 
 namespace App\Models\Finance;
 
+use App\Models\Concerns\HasOwner;
 use Database\Factories\Finance\AssetFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
@@ -31,11 +32,11 @@ use Illuminate\Support\Carbon;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['name', 'color', 'tracks_monthly_balance'])]
+#[Fillable(['user_id', 'name', 'color', 'tracks_monthly_balance'])]
 class Asset extends Model
 {
     /** @use HasFactory<AssetFactory> */
-    use HasFactory;
+    use HasFactory, HasOwner;
 
     /**
      * @return array<string, string>
@@ -56,10 +57,13 @@ class Asset extends Model
     }
 
     /**
-     * The asset whose month-to-month change is the monthly balance, if any.
+     * The assets whose month-to-month change is the monthly balance, keyed by owner id.
+     *
+     * @return Collection<int, self>
      */
-    public static function monthlyBalanceAsset(): ?self
+    public static function monthlyBalanceAssets(): Collection
     {
-        return self::query()->where('tracks_monthly_balance', true)->orderBy('id')->first();
+        /** @var Collection<int, self> */
+        return self::query()->where('tracks_monthly_balance', true)->orderBy('id')->get()->keyBy('user_id');
     }
 }

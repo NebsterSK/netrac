@@ -16,6 +16,7 @@ class StatementData extends Data
      */
     public function __construct(
         public int $id,
+        public int $user_id,
         public Carbon $date,
         #[LiteralTypeScriptType('Record<number, number>')]
         public array $amounts,
@@ -27,6 +28,7 @@ class StatementData extends Data
     {
         return new self(
             id: $statement->id,
+            user_id: $statement->user_id,
             date: $statement->date,
             amounts: $statement->amounts(),
             note: $statement->note,
