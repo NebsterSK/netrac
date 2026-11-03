@@ -5,13 +5,8 @@ import { GripVertical } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import BuzerlistokRateChart from '@/components/BuzerlistokRateChart.vue';
 import ExpenseDoughnut from '@/components/ExpenseDoughnut.vue';
+import WeightTrendChart from '@/components/WeightTrendChart.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { useAppearance } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { seriesColor } from '@/lib/chartColors';
@@ -19,17 +14,15 @@ import { dashboard } from '@/routes';
 import { reorder } from '@/routes/finance/expense-categories';
 import type { BreadcrumbItem } from '@/types';
 
-type MonthlyAverage = App.Data.Finance.MonthlyAverageData;
-
 type PeriodAverages = App.Data.Finance.PeriodAveragesData;
 
 type ExpenseCategoryBreakdown = App.Data.Finance.ExpenseCategoryBreakdownData;
 
 const props = defineProps<{
-    monthlyAverages: MonthlyAverage[];
     periodAverages: PeriodAverages;
     expenseCategories: ExpenseCategoryBreakdown[];
     buzerlistokWeeks: App.Data.Buzerlistok.WeekData[];
+    latestWeights: App.Data.Health.WeightData[];
 }>();
 
 const { resolvedAppearance } = useAppearance();
@@ -135,73 +128,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const monthNames = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-];
-
-const averageByMonth = computed(() => {
-    const map = new Map<number, MonthlyAverage>();
-
-    for (const entry of props.monthlyAverages) {
-        map.set(entry.month, entry);
-    }
-
-    return map;
-});
-
-const maxAbsAverage = computed(() => {
-    if (props.monthlyAverages.length === 0) {
-        return 1;
-    }
-
-    return Math.max(
-        ...props.monthlyAverages.map((entry) => Math.abs(entry.average)),
-        1,
-    );
-});
-
-function heatmapColor(monthIndex: number): string {
-    const entry = averageByMonth.value.get(monthIndex);
-
-    if (!entry) {
-        return 'bg-muted';
-    }
-
-    const intensity = Math.abs(entry.average) / maxAbsAverage.value;
-    const level = Math.ceil(intensity * 4);
-
-    if (entry.average >= 0) {
-        const greens = [
-            'bg-green-100 dark:bg-green-950',
-            'bg-green-200 dark:bg-green-900',
-            'bg-green-400 dark:bg-green-700',
-            'bg-green-500 dark:bg-green-600',
-        ];
-
-        return greens[Math.min(level, 4) - 1] ?? greens[0];
-    }
-
-    const reds = [
-        'bg-red-100 dark:bg-red-950',
-        'bg-red-200 dark:bg-red-900',
-        'bg-red-400 dark:bg-red-700',
-        'bg-red-500 dark:bg-red-600',
-    ];
-
-    return reds[Math.min(level, 4) - 1] ?? reds[0];
-}
-
 function formatAmount(amount: number): string {
     const sign = amount >= 0 ? '+' : '−';
 
@@ -232,6 +158,16 @@ const periods = computed(() => [
             class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
         >
             <div class="grid auto-rows-min gap-4 md:grid-cols-3">
+                <Card class="h-64 md:aspect-video md:h-auto">
+                    <CardHeader>
+                        <CardTitle>Buzerlistok Success Rate</CardTitle>
+                    </CardHeader>
+
+                    <CardContent class="min-h-0 flex-1">
+                        <BuzerlistokRateChart :weeks="buzerlistokWeeks" />
+                    </CardContent>
+                </Card>
+
                 <Card class="aspect-video">
                     <CardHeader>
                         <CardTitle>Average Balance</CardTitle>
@@ -272,81 +208,13 @@ const periods = computed(() => [
                     </CardContent>
                 </Card>
 
-                <Card class="aspect-video">
-                    <CardHeader>
-                        <CardTitle>Monthly Balance Averages</CardTitle>
-                    </CardHeader>
-
-                    <CardContent class="flex-1">
-                        <div class="grid h-full grid-cols-4 gap-2">
-                            <TooltipProvider
-                                v-for="(name, idx) in monthNames"
-                                :key="idx"
-                            >
-                                <Tooltip>
-                                    <TooltipTrigger as-child>
-                                        <div
-                                            class="flex items-center justify-center rounded-md text-xs font-medium transition-colors"
-                                            :class="[
-                                                heatmapColor(idx + 1),
-                                                averageByMonth.has(idx + 1)
-                                                    ? 'text-white dark:text-white'
-                                                    : 'text-muted-foreground',
-                                            ]"
-                                        >
-                                            {{ name }}
-                                        </div>
-                                    </TooltipTrigger>
-
-                                    <TooltipContent>
-                                        <template
-                                            v-if="averageByMonth.has(idx + 1)"
-                                        >
-                                            <p class="font-mono font-medium">
-                                                {{
-                                                    formatAmount(
-                                                        averageByMonth.get(
-                                                            idx + 1,
-                                                        )!.average,
-                                                    )
-                                                }}
-                                            </p>
-
-                                            <p
-                                                class="text-xs text-muted-foreground"
-                                            >
-                                                {{
-                                                    averageByMonth.get(idx + 1)!
-                                                        .count
-                                                }}
-                                                {{
-                                                    averageByMonth.get(idx + 1)!
-                                                        .count === 1
-                                                        ? 'entry'
-                                                        : 'entries'
-                                                }}
-                                            </p>
-                                        </template>
-
-                                        <template v-else>
-                                            <p class="text-muted-foreground">
-                                                No data
-                                            </p>
-                                        </template>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </div>
-                    </CardContent>
-                </Card>
-
                 <Card class="h-64 md:aspect-video md:h-auto">
                     <CardHeader>
-                        <CardTitle>Buzerlistok Success Rate</CardTitle>
+                        <CardTitle>Weight</CardTitle>
                     </CardHeader>
 
                     <CardContent class="min-h-0 flex-1">
-                        <BuzerlistokRateChart :weeks="buzerlistokWeeks" />
+                        <WeightTrendChart :weights="latestWeights" />
                     </CardContent>
                 </Card>
             </div>

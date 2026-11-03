@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import type { ScriptableContext, TooltipItem } from 'chart.js';
+import type {
+    ScriptableContext,
+    ScriptableLineSegmentContext,
+    TooltipItem,
+} from 'chart.js';
 import {
     CategoryScale,
     Chart as ChartJS,
@@ -31,16 +35,22 @@ ChartJS.register(
     ChartTooltip,
 );
 
-/** Weeks that already have a rate, oldest first. */
+type RatedWeek = { week: Week; rate: number; isUnfinished: boolean };
+
+/**
+ * Weeks that already have a rate, oldest first. A week whose last day hasn't
+ * passed yet is unfinished: its rate is provisional, like a Net Worth draft.
+ */
 const ratedWeeks = computed(() => {
     const today = todayString();
 
     return props.weeks
-        .map((week) => ({ week, rate: weekSuccessRate(week, today) }))
-        .filter(
-            (entry): entry is { week: Week; rate: number } =>
-                entry.rate !== null,
-        );
+        .map((week) => ({
+            week,
+            rate: weekSuccessRate(week, today),
+            isUnfinished: week.days[week.days.length - 1] >= today,
+        }))
+        .filter((entry): entry is RatedWeek => entry.rate !== null);
 });
 
 /** `starts_on` as a European day.month label, e.g. "27. 10.". */
@@ -81,7 +91,12 @@ const chartData = computed(() => ({
             data: ratedWeeks.value.map((entry) => entry.rate),
             borderColor: lineGradient,
             pointBackgroundColor: ratedWeeks.value.map((entry) =>
-                successRateColor(entry.rate),
+                entry.isUnfinished
+                    ? 'transparent'
+                    : successRateColor(entry.rate),
+            ),
+            pointBorderWidth: ratedWeeks.value.map((entry) =>
+                entry.isUnfinished ? 2 : 1,
             ),
             pointBorderColor: ratedWeeks.value.map((entry) =>
                 successRateColor(entry.rate),
@@ -90,6 +105,12 @@ const chartData = computed(() => ({
             pointRadius: 4,
             pointHoverRadius: 6,
             tension: 0.3,
+            segment: {
+                borderDash: (ctx: ScriptableLineSegmentContext) =>
+                    ratedWeeks.value[ctx.p1DataIndex]?.isUnfinished
+                        ? [6, 6]
+                        : undefined,
+            },
         },
     ],
 }));
@@ -115,7 +136,9 @@ const chartOptions = computed(() => {
             tooltip: {
                 callbacks: {
                     title: (items: TooltipItem<'line'>[]) =>
-                        `Week of ${items[0].label}`,
+                        ratedWeeks.value[items[0].dataIndex]?.isUnfinished
+                            ? `Week of ${items[0].label} (in progress)`
+                            : `Week of ${items[0].label}`,
                     label: (item: TooltipItem<'line'>) =>
                         `${item.parsed.y}% of goals succeeded`,
                 },

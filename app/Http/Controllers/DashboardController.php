@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Data\Buzerlistok\WeekData;
 use App\Data\Finance\ExpenseCategoryBreakdownData;
-use App\Data\Finance\MonthlyAverageData;
 use App\Data\Finance\MonthlyBalanceData;
 use App\Data\Finance\PeriodAveragesData;
+use App\Data\Health\WeightData;
 use App\Models\Buzerlistok\Week;
 use App\Models\Finance\ExpenseCategory;
+use App\Models\Health\Weight;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,22 +19,15 @@ class DashboardController extends Controller
     /** How many of the latest Buzerlistok weeks the success-rate chart shows. */
     private const int BUZERLISTOK_CHART_WEEKS = 10;
 
+    /** How many of the latest weight entries the weight chart shows. */
+    private const int WEIGHT_CHART_ENTRIES = 5;
+
     public function __invoke(Request $request): Response
     {
         $ownerFilter = $request->user()->financeOwnerFilter();
 
         $balances = MonthlyBalanceData::forOwnerFilter($ownerFilter)
             ->reject(fn (MonthlyBalanceData $balance): bool => $balance->is_draft);
-
-        $monthlyAverages = $balances
-            ->groupBy(fn (MonthlyBalanceData $balance): int => (int) substr($balance->date, 5, 2))
-            ->sortKeys()
-            ->map(fn (Collection $group, int $month): array => [
-                'month' => $month,
-                'average' => (int) round($group->avg('amount')),
-                'count' => $group->count(),
-            ])
-            ->values();
 
         $amounts = $balances->reverse()->pluck('amount')->values();
 
@@ -60,13 +53,20 @@ class DashboardController extends Controller
             ->map(fn (Week $week): WeekData => WeekData::fromWeek($week))
             ->values();
 
+        $latestWeights = Weight::orderByDesc('date')
+            ->limit(self::WEIGHT_CHART_ENTRIES)
+            ->get()
+            ->reverse()
+            ->map(fn (Weight $weight): WeightData => WeightData::fromWeight($weight))
+            ->values();
+
         return Inertia::render('Dashboard', [
-            'monthlyAverages' => MonthlyAverageData::collect($monthlyAverages),
             'periodAverages' => PeriodAveragesData::from($periodAverages),
             'expenseCategories' => $expenseCategories
                 ->map(fn (ExpenseCategory $category): ExpenseCategoryBreakdownData => ExpenseCategoryBreakdownData::fromCategory($category))
                 ->values(),
             'buzerlistokWeeks' => $buzerlistokWeeks,
+            'latestWeights' => $latestWeights,
         ]);
     }
 }

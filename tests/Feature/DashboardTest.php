@@ -4,6 +4,7 @@ use App\Models\Buzerlistok\Week;
 use App\Models\Finance\Asset;
 use App\Models\Finance\Expense;
 use App\Models\Finance\ExpenseCategory;
+use App\Models\Health\Weight;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
@@ -23,7 +24,7 @@ describe('access control', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
-                ->has('monthlyAverages')
+                ->has('latestWeights')
                 ->has('periodAverages')
                 ->has('expenseCategories')
                 ->has('buzerlistokWeeks'));
@@ -46,30 +47,26 @@ it('sends the latest 10 Buzerlistok weeks oldest first, with goals and marks', f
             ->has('buzerlistokWeeks.9.goals'));
 });
 
+it('sends the latest 5 weight entries oldest first', function () {
+    foreach (['2026-01-05', '2026-01-20', '2026-02-01', '2026-02-03', '2026-02-17', '2026-03-01'] as $idx => $date) {
+        Weight::factory()->create(['date' => $date, 'weight' => 80 + $idx]);
+    }
+
+    $this->actingAs($this->owner)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('latestWeights', 5)
+            ->where('latestWeights.0.date', '2026-01-20')
+            ->where('latestWeights.0.weight', 81)
+            ->where('latestWeights.4.date', '2026-03-01'));
+});
+
 it('reports null period averages with no balances', function () {
     $this->actingAs($this->owner)
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('periodAverages.overall', null)
             ->where('periodAverages.last6', null));
-});
-
-it('averages derived balances per calendar month', function () {
-    balanceStatement($this->owner, $this->account, '2023-02-01', 1000);
-    balanceStatement($this->owner, $this->account, '2023-03-01', 1100);
-    balanceStatement($this->owner, $this->account, '2024-02-01', 2000);
-    balanceStatement($this->owner, $this->account, '2024-03-01', 2201);
-
-    $this->actingAs($this->owner)
-        ->get(route('dashboard'))
-        ->assertInertia(fn (Assert $page) => $page
-            ->has('monthlyAverages', 2)
-            ->where('monthlyAverages.0.month', 2)
-            ->where('monthlyAverages.0.average', 900)
-            ->where('monthlyAverages.0.count', 1)
-            ->where('monthlyAverages.1.month', 3)
-            ->where('monthlyAverages.1.average', 151)
-            ->where('monthlyAverages.1.count', 2));
 });
 
 it('computes the period averages from derived balances', function () {
@@ -93,8 +90,7 @@ it('leaves a draft balance out of the averages', function () {
     $this->actingAs($this->owner)
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('periodAverages.overall', 100)
-            ->has('monthlyAverages', 1));
+            ->where('periodAverages.overall', 100));
 });
 
 it('returns every expense category with its expenses and total, in saved order', function () {
@@ -144,8 +140,7 @@ describe('owner filter', function () {
         $this->actingAs($this->owner)
             ->get(route('dashboard'))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('periodAverages.overall', 300)
-                ->where('monthlyAverages.0.average', 300));
+                ->where('periodAverages.overall', 300));
     });
 
     it('averages the summed balances under All, leaving out incomplete months', function () {
@@ -158,8 +153,7 @@ describe('owner filter', function () {
         $this->actingAs($this->owner)
             ->get(route('dashboard'))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('periodAverages.overall', 400)
-                ->has('monthlyAverages', 1));
+                ->where('periodAverages.overall', 400));
     });
 
     it("breaks down only the filtered owner's expenses", function () {
