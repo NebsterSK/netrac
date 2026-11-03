@@ -166,6 +166,20 @@
     * {
         @apply border-border outline-ring/50;
     }
+
+    /* Tailwind v4 resets buttons to the default cursor; every enabled clickable control gets the pointer. */
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']),
+    [role='tab']:not([data-disabled]),
+    [role='switch']:not(:disabled),
+    [role='checkbox']:not(:disabled),
+    [role='radio']:not(:disabled),
+    [role='combobox']:not(:disabled),
+    label[for],
+    summary,
+    select:not(:disabled) {
+        cursor: pointer;
+    }
     body {
         @apply bg-background text-foreground;
     }

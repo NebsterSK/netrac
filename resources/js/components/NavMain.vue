@@ -23,7 +23,10 @@ const { isCurrentUrl } = useCurrentUrl();
         :key="group.label ?? `group-${groupIndex}`"
         class="px-2 py-0"
     >
-        <SidebarGroupLabel v-if="group.label">
+        <SidebarGroupLabel
+            v-if="group.label"
+            class="group-data-[collapsible=icon]:pointer-events-none"
+        >
             {{ group.label }}
         </SidebarGroupLabel>
 
