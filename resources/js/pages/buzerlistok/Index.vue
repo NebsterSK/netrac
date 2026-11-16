@@ -27,20 +27,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import WeekStartPicker from '@/components/WeekStartPicker.vue';
+import WeeklyGoalFields from '@/components/WeeklyGoalFields.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import type { WeeklyGoalField } from '@/lib/buzerlistok';
 import {
     successRateColor,
     todayString,
+    weeklyGoalPayload,
     weekSuccessRate as successRateOn,
 } from '@/lib/buzerlistok';
 import { dashboard } from '@/routes';
 import buzerlistok from '@/routes/buzerlistok';
 import marks from '@/routes/buzerlistok/goals/marks';
+import completions from '@/routes/buzerlistok/weekly-goals/completions';
 import type { BreadcrumbItem } from '@/types';
 
 type Week = App.Data.Buzerlistok.WeekData;
 
 type Mark = App.Data.Buzerlistok.MarkData;
+
+type WeeklyGoal = App.Data.Buzerlistok.WeeklyGoalData;
 
 type MarkStatus = App.Enums.Buzerlistok.MarkStatus;
 
@@ -215,6 +221,28 @@ function submitMark(goalId: number, date: string, status: MarkStatus | null) {
     );
 }
 
+const updatingWeeklyGoal = ref(false);
+
+function changeCompletions(weeklyGoal: WeeklyGoal, change: number) {
+    if (updatingWeeklyGoal.value) {
+        return;
+    }
+
+    updatingWeeklyGoal.value = true;
+
+    router.put(
+        completions.update.url(weeklyGoal.id),
+        { completions: Math.max(0, weeklyGoal.completions + change) },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => {
+                updatingWeeklyGoal.value = false;
+            },
+        },
+    );
+}
+
 function paintCell(goalId: number, date: string) {
     if (submitting.value) {
         return;
@@ -267,10 +295,23 @@ function makeGoalField(): GoalField {
     return { id: nextGoalFieldId++, name: '' };
 }
 
-const createForm = useForm<{ starts_on: string; goals: GoalField[] }>({
+const createForm = useForm<{
+    starts_on: string;
+    goals: GoalField[];
+    weekly_goals: WeeklyGoalField[];
+}>({
     starts_on: firstFreeMonday(),
     goals: [makeGoalField()],
+    weekly_goals: [],
 });
+
+/** The first error on any weekly goal row, shown once under the list. */
+const createWeeklyGoalError = computed(
+    () =>
+        Object.entries(createForm.errors).find(([key]) =>
+            key.startsWith('weekly_goals'),
+        )?.[1],
+);
 
 const createStartsOnTaken = computed(() =>
     props.takenWeekStarts.includes(createForm.starts_on),
@@ -280,6 +321,7 @@ function openCreateDialog() {
     createForm.clearErrors();
     createForm.starts_on = firstFreeMonday();
     createForm.goals = [makeGoalField()];
+    createForm.weekly_goals = [];
     createOpen.value = true;
 }
 
@@ -328,6 +370,7 @@ function submitCreate() {
             goals: data.goals
                 .map((goal) => goal.name.trim())
                 .filter((name) => name !== ''),
+            weekly_goals: weeklyGoalPayload(data.weekly_goals),
         }))
         .post(buzerlistok.store.url(), {
             preserveScroll: true,
@@ -545,16 +588,22 @@ function weekRange(week: Week): string {
                     </div>
                 </CardHeader>
 
-                <CardContent class="overflow-x-auto max-sm:px-4">
+                <CardContent
+                    v-if="week.goals.length > 0 || week.weekly_goals.length === 0"
+                    class="overflow-x-auto max-sm:px-4"
+                >
                     <p
-                        v-if="week.goals.length === 0"
+                        v-if="
+                            week.goals.length === 0 &&
+                            week.weekly_goals.length === 0
+                        "
                         class="py-4 text-center text-sm text-muted-foreground"
                     >
                         No goals for this week.
                     </p>
 
                     <table
-                        v-else
+                        v-else-if="week.goals.length > 0"
                         class="border-separate border-spacing-1 text-sm"
                     >
                         <thead>
@@ -684,6 +733,85 @@ function weekRange(week: Week): string {
                         </tbody>
                     </table>
                 </CardContent>
+
+                <CardContent
+                    v-if="week.weekly_goals.length > 0"
+                    class="space-y-2 max-sm:px-4"
+                >
+                    <h3 class="text-sm font-medium text-muted-foreground">
+                        Weekly goals
+                    </h3>
+
+                    <ul class="space-y-2">
+                        <li
+                            v-for="weeklyGoal in week.weekly_goals"
+                            :key="weeklyGoal.id"
+                            class="flex items-center gap-3"
+                        >
+                            <span
+                                class="min-w-0 flex-1 truncate text-sm"
+                                :title="weeklyGoal.name"
+                            >
+                                {{ weeklyGoal.name }}
+                            </span>
+
+                            <div class="flex shrink-0 items-center gap-1">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon-sm"
+                                    class="cursor-pointer"
+                                    :aria-label="`${weeklyGoal.name}: one time less`"
+                                    :disabled="
+                                        updatingWeeklyGoal ||
+                                        weeklyGoal.completions === 0
+                                    "
+                                    @click="changeCompletions(weeklyGoal, -1)"
+                                >
+                                    <Minus class="size-4" />
+                                </Button>
+
+                                <span
+                                    class="flex h-8 min-w-14 items-center justify-center gap-1 rounded-md px-2 font-mono text-sm"
+                                    :class="
+                                        weeklyGoal.completions >=
+                                        weeklyGoal.target
+                                            ? 'bg-green-500 text-white dark:bg-green-600'
+                                            : 'bg-muted'
+                                    "
+                                    :aria-label="`${weeklyGoal.completions} of ${weeklyGoal.target} times done`"
+                                >
+                                    <Check
+                                        v-if="
+                                            weeklyGoal.completions >=
+                                            weeklyGoal.target
+                                        "
+                                        class="size-3.5"
+                                    />
+
+                                    {{ weeklyGoal.completions }}/{{
+                                        weeklyGoal.target
+                                    }}
+                                </span>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon-sm"
+                                    class="cursor-pointer"
+                                    :aria-label="`${weeklyGoal.name}: one time more`"
+                                    :disabled="
+                                        updatingWeeklyGoal ||
+                                        weeklyGoal.completions >= 99
+                                    "
+                                    @click="changeCompletions(weeklyGoal, 1)"
+                                >
+                                    <Plus class="size-4" />
+                                </Button>
+                            </div>
+                        </li>
+                    </ul>
+                </CardContent>
             </Card>
         </div>
 
@@ -724,7 +852,7 @@ function weekRange(week: Week): string {
                         </div>
 
                         <div ref="goalFields" class="space-y-2">
-                            <Label>Goals</Label>
+                            <Label>Daily goals</Label>
 
                             <div
                                 v-for="(goal, index) in createForm.goals"
@@ -764,6 +892,11 @@ function weekRange(week: Week): string {
                                 Add goal
                             </Button>
                         </div>
+
+                        <WeeklyGoalFields
+                            v-model="createForm.weekly_goals"
+                            :error="createWeeklyGoalError"
+                        />
 
                         <DialogFooter>
                             <Button

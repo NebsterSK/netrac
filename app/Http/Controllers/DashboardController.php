@@ -45,7 +45,7 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        $buzerlistokWeeks = Week::with('goals.marks')
+        $buzerlistokWeeks = Week::with(['goals.marks', 'weeklyGoals'])
             ->orderByDesc('starts_on')
             ->limit(self::BUZERLISTOK_CHART_WEEKS)
             ->get()

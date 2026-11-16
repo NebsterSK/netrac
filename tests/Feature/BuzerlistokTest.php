@@ -4,6 +4,7 @@ use App\Enums\Buzerlistok\MarkStatus;
 use App\Models\Buzerlistok\Goal;
 use App\Models\Buzerlistok\Mark;
 use App\Models\Buzerlistok\Week;
+use App\Models\Buzerlistok\WeeklyGoal;
 use Inertia\Testing\AssertableInertia as Assert;
 
 describe('access control', function () {
@@ -15,6 +16,7 @@ describe('access control', function () {
     it('allows authenticated users', function () {
         $week = Week::factory()->create(['starts_on' => '2026-07-06']);
         Goal::factory()->create(['week_id' => $week->id, 'name' => 'Read']);
+        WeeklyGoal::factory()->create(['week_id' => $week->id, 'name' => 'Gym', 'target' => 3, 'completions' => 1]);
 
         $this->actingAs(verifiedUser())
             ->get(route('buzerlistok.index'))
@@ -26,7 +28,10 @@ describe('access control', function () {
                 ->has('weeks.0.days', 7)
                 ->where('weeks.0.days.0', '2026-07-06')
                 ->where('weeks.0.days.6', '2026-07-12')
-                ->has('weeks.0.goals', 1));
+                ->has('weeks.0.goals', 1)
+                ->where('weeks.0.weekly_goals.0.name', 'Gym')
+                ->where('weeks.0.weekly_goals.0.target', 3)
+                ->where('weeks.0.weekly_goals.0.completions', 1));
     });
 });
 
@@ -65,8 +70,42 @@ describe('creating a week', function () {
             ->post(route('buzerlistok.store'), [
                 'starts_on' => '2026-07-06',
                 'goals' => [],
+                'weekly_goals' => [],
             ])
-            ->assertSessionHasErrors('goals');
+            ->assertSessionHasErrors(['goals' => 'Add at least one daily or weekly goal.']);
+
+        expect(Week::count())->toBe(0);
+    });
+
+    it('creates a week with weekly goals only', function () {
+        $this->actingAs(verifiedUser())
+            ->post(route('buzerlistok.store'), [
+                'starts_on' => '2026-07-06',
+                'goals' => [],
+                'weekly_goals' => [
+                    ['name' => 'Gym', 'target' => 3],
+                    ['name' => 'Shave', 'target' => 1],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $week = Week::sole();
+
+        expect($week->goals)->toHaveCount(0)
+            ->and($week->weeklyGoals->pluck('name')->all())->toBe(['Gym', 'Shave'])
+            ->and($week->weeklyGoals->pluck('target')->all())->toBe([3, 1])
+            ->and($week->weeklyGoals->pluck('completions')->all())->toBe([0, 0])
+            ->and($week->weeklyGoals->pluck('position')->all())->toBe([0, 1]);
+    });
+
+    it('rejects a weekly goal that is never required', function () {
+        $this->actingAs(verifiedUser())
+            ->post(route('buzerlistok.store'), [
+                'starts_on' => '2026-07-06',
+                'weekly_goals' => [['name' => 'Gym', 'target' => 0]],
+            ])
+            ->assertSessionHasErrors('weekly_goals.0.target');
 
         expect(Week::count())->toBe(0);
     });
@@ -283,6 +322,78 @@ describe('editing a week', function () {
 
         expect($foreignGoal->fresh()->name)->not->toBe('Hijack');
     });
+
+    it('renames, retargets, adds and removes weekly goals while keeping completions', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        Goal::factory()->create(['week_id' => $week->id]);
+        $gym = WeeklyGoal::factory()->create(['week_id' => $week->id, 'name' => 'Gym', 'target' => 3, 'completions' => 2]);
+        $shave = WeeklyGoal::factory()->create(['week_id' => $week->id, 'name' => 'Shave', 'position' => 1]);
+
+        $this->actingAs(verifiedUser())
+            ->put(route('buzerlistok.update', $week), [
+                'starts_on' => '2026-07-06',
+                'goals' => [['id' => $week->goals->first()->id, 'name' => 'Read']],
+                'weekly_goals' => [
+                    ['id' => null, 'name' => 'Call parents', 'target' => 1],
+                    ['id' => $gym->id, 'name' => 'Workout', 'target' => 4],
+                ],
+            ])
+            ->assertRedirect(route('buzerlistok.index'));
+
+        $weeklyGoals = $week->fresh()->weeklyGoals;
+
+        expect($weeklyGoals->pluck('name')->all())->toBe(['Call parents', 'Workout'])
+            ->and($weeklyGoals[1]->id)->toBe($gym->id)
+            ->and($weeklyGoals[1]->target)->toBe(4)
+            ->and($weeklyGoals[1]->completions)->toBe(2)
+            ->and(WeeklyGoal::find($shave->id))->toBeNull();
+    });
+
+    it('rejects weekly goals belonging to another week', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        $foreignWeeklyGoal = WeeklyGoal::factory()->create();
+
+        $this->actingAs(verifiedUser())
+            ->put(route('buzerlistok.update', $week), [
+                'starts_on' => '2026-07-06',
+                'weekly_goals' => [['id' => $foreignWeeklyGoal->id, 'name' => 'Hijack', 'target' => 1]],
+            ])
+            ->assertSessionHasErrors('weekly_goals.0.id');
+
+        expect($foreignWeeklyGoal->fresh()->name)->not->toBe('Hijack');
+    });
+});
+
+describe('counting weekly goal completions', function () {
+    it('redirects guests to login', function () {
+        $weeklyGoal = WeeklyGoal::factory()->create();
+
+        $this->put(route('buzerlistok.weekly-goals.completions.update', $weeklyGoal), ['completions' => 1])
+            ->assertRedirect(route('login'));
+
+        expect($weeklyGoal->fresh()->completions)->toBe(0);
+    });
+
+    it('sets how many times the goal was done', function () {
+        $weeklyGoal = WeeklyGoal::factory()->create(['target' => 3]);
+
+        $this->actingAs(verifiedUser())
+            ->put(route('buzerlistok.weekly-goals.completions.update', $weeklyGoal), ['completions' => 4])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect($weeklyGoal->fresh()->completions)->toBe(4);
+    });
+
+    it('rejects a negative count', function () {
+        $weeklyGoal = WeeklyGoal::factory()->create(['completions' => 1]);
+
+        $this->actingAs(verifiedUser())
+            ->put(route('buzerlistok.weekly-goals.completions.update', $weeklyGoal), ['completions' => -1])
+            ->assertSessionHasErrors('completions');
+
+        expect($weeklyGoal->fresh()->completions)->toBe(1);
+    });
 });
 
 describe('duplicating a week', function () {
@@ -312,6 +423,21 @@ describe('duplicating a week', function () {
             ->and($duplicate->goals->pluck('position')->all())->toBe([0, 1])
             ->and(Mark::whereIn('goal_id', $duplicate->goals->pluck('id'))->count())->toBe(0)
             ->and($week->fresh()->goals)->toHaveCount(2);
+    });
+
+    it('copies the weekly goals without their completions', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        WeeklyGoal::factory()->create(['week_id' => $week->id, 'name' => 'Gym', 'target' => 3, 'completions' => 2]);
+
+        $this->actingAs(verifiedUser())
+            ->post(route('buzerlistok.duplicate', $week))
+            ->assertSessionHas('success');
+
+        $duplicate = Week::whereDate('starts_on', '2026-07-13')->sole();
+
+        expect($duplicate->weeklyGoals)->toHaveCount(1)
+            ->and($duplicate->weeklyGoals->first()->only(['name', 'target', 'completions']))
+            ->toBe(['name' => 'Gym', 'target' => 3, 'completions' => 0]);
     });
 
     it('refuses to duplicate a week that is not the latest', function () {

@@ -17,6 +17,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Goal> $goals
  * @property-read int|null $goals_count
+ * @property-read Collection<int, WeeklyGoal> $weeklyGoals
+ * @property-read int|null $weekly_goals_count
  *
  * @method static \Database\Factories\Buzerlistok\WeekFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Week newModelQuery()
@@ -53,5 +55,13 @@ class Week extends Model
     public function goals(): HasMany
     {
         return $this->hasMany(Goal::class)->orderBy('position');
+    }
+
+    /**
+     * @return HasMany<WeeklyGoal, $this>
+     */
+    public function weeklyGoals(): HasMany
+    {
+        return $this->hasMany(WeeklyGoal::class)->orderBy('position');
     }
 }

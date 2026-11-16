@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Buzerlistok\MarkController;
 use App\Http\Controllers\Buzerlistok\WeekController;
+use App\Http\Controllers\Buzerlistok\WeeklyGoalController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Finance\AssetController;
 use App\Http\Controllers\Finance\ExpenseCategoryController;
@@ -31,6 +32,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{week}/duplicate', [WeekController::class, 'duplicate'])->name('duplicate');
         Route::delete('/{week}', [WeekController::class, 'destroy'])->name('destroy');
         Route::put('/goals/{goal}/marks', [MarkController::class, 'update'])->name('goals.marks.update');
+        Route::put('/weekly-goals/{weeklyGoal}/completions', [WeeklyGoalController::class, 'updateCompletions'])->name('weekly-goals.completions.update');
     });
 
     Route::prefix('finance')->name('finance.')->group(function () {

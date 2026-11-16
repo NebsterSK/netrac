@@ -9,7 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import WeekStartPicker from '@/components/WeekStartPicker.vue';
+import WeeklyGoalFields from '@/components/WeeklyGoalFields.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import type { WeeklyGoalField } from '@/lib/buzerlistok';
+import { makeWeeklyGoalField, weeklyGoalPayload } from '@/lib/buzerlistok';
 import { dashboard } from '@/routes';
 import buzerlistok from '@/routes/buzerlistok';
 import type { BreadcrumbItem } from '@/types';
@@ -45,10 +48,25 @@ function makeGoalField(id: number | null = null, name = ''): GoalField {
     return { key: nextGoalKey++, id, name };
 }
 
-const form = useForm<{ starts_on: string; goals: GoalField[] }>({
+const form = useForm<{
+    starts_on: string;
+    goals: GoalField[];
+    weekly_goals: WeeklyGoalField[];
+}>({
     starts_on: props.week.starts_on,
     goals: props.week.goals.map((goal) => makeGoalField(goal.id, goal.name)),
+    weekly_goals: props.week.weekly_goals.map((weeklyGoal) =>
+        makeWeeklyGoalField(weeklyGoal.id, weeklyGoal.name, weeklyGoal.target),
+    ),
 });
+
+/** The first error on any weekly goal row, shown once under the list. */
+const weeklyGoalError = computed(
+    () =>
+        Object.entries(form.errors).find(([key]) =>
+            key.startsWith('weekly_goals'),
+        )?.[1],
+);
 
 const startsOnTaken = computed(() =>
     props.takenWeekStarts.includes(form.starts_on),
@@ -148,6 +166,7 @@ function submitForm() {
         goals: data.goals
             .map((goal) => ({ id: goal.id, name: goal.name.trim() }))
             .filter((goal) => goal.name !== ''),
+        weekly_goals: weeklyGoalPayload(data.weekly_goals),
     })).put(buzerlistok.update.url(props.week.id));
 }
 </script>
@@ -191,7 +210,7 @@ function submitForm() {
                         </div>
 
                         <div ref="goalFields" class="space-y-2">
-                            <Label>Goals</Label>
+                            <Label>Daily goals</Label>
 
                             <ul class="space-y-2">
                                 <li
@@ -280,6 +299,11 @@ function submitForm() {
                                 Add goal
                             </Button>
                         </div>
+
+                        <WeeklyGoalFields
+                            v-model="form.weekly_goals"
+                            :error="weeklyGoalError"
+                        />
                     </CardContent>
                 </Card>
 

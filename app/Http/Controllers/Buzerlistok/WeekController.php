@@ -22,7 +22,7 @@ class WeekController extends Controller
 {
     public function index(): Response
     {
-        $weeks = Week::with('goals.marks')
+        $weeks = Week::with(['goals.marks', 'weeklyGoals'])
             ->orderBy('starts_on', 'desc')
             ->limit(12)
             ->get();
@@ -51,6 +51,14 @@ class WeekController extends Controller
                         'position' => $position,
                     ]);
                 }
+
+                foreach ($data->weekly_goals as $position => $weeklyGoal) {
+                    $week->weeklyGoals()->create([
+                        'name' => $weeklyGoal['name'],
+                        'target' => $weeklyGoal['target'],
+                        'position' => $position,
+                    ]);
+                }
             });
         } catch (Throwable $error) {
             Log::error('Failed to create buzerlistok week', [
@@ -67,7 +75,7 @@ class WeekController extends Controller
 
     public function edit(Week $week): Response
     {
-        $week->load('goals.marks');
+        $week->load(['goals.marks', 'weeklyGoals']);
 
         return Inertia::render('buzerlistok/Edit', [
             'week' => WeekData::fromWeek($week),
@@ -111,6 +119,27 @@ class WeekController extends Controller
                     }
                 }
 
+                $keptWeeklyGoalIds = collect($data->weekly_goals)
+                    ->pluck('id')
+                    ->filter()
+                    ->all();
+
+                $week->weeklyGoals()->whereNotIn('id', $keptWeeklyGoalIds)->delete();
+
+                foreach ($data->weekly_goals as $position => $weeklyGoal) {
+                    $attributes = [
+                        'name' => $weeklyGoal['name'],
+                        'target' => $weeklyGoal['target'],
+                        'position' => $position,
+                    ];
+
+                    if (isset($weeklyGoal['id'])) {
+                        $week->weeklyGoals()->whereKey($weeklyGoal['id'])->update($attributes);
+                    } else {
+                        $week->weeklyGoals()->create($attributes);
+                    }
+                }
+
                 if ($shiftDays !== 0) {
                     Mark::whereIn('goal_id', $keptGoalIds)
                         ->get()
@@ -134,7 +163,8 @@ class WeekController extends Controller
     }
 
     /**
-     * Copy the latest week's goals into the following week, without any marks.
+     * Copy the latest week's goals into the following week, without any marks
+     * or completions.
      */
     public function duplicate(Week $week): RedirectResponse
     {
@@ -154,6 +184,14 @@ class WeekController extends Controller
                     $duplicate->goals()->create([
                         'name' => $goal->name,
                         'position' => $goal->position,
+                    ]);
+                }
+
+                foreach ($week->weeklyGoals as $weeklyGoal) {
+                    $duplicate->weeklyGoals()->create([
+                        'name' => $weeklyGoal->name,
+                        'target' => $weeklyGoal->target,
+                        'position' => $weeklyGoal->position,
                     ]);
                 }
             });

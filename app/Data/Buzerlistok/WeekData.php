@@ -4,6 +4,7 @@ namespace App\Data\Buzerlistok;
 
 use App\Models\Buzerlistok\Goal;
 use App\Models\Buzerlistok\Week;
+use App\Models\Buzerlistok\WeeklyGoal;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Data;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
@@ -14,6 +15,7 @@ class WeekData extends Data
     /**
      * @param  array<int, string>  $days
      * @param  array<int, GoalData>  $goals
+     * @param  array<int, WeeklyGoalData>  $weekly_goals
      */
     public function __construct(
         public int $id,
@@ -21,6 +23,8 @@ class WeekData extends Data
         public array $days,
         #[DataCollectionOf(GoalData::class)]
         public array $goals,
+        #[DataCollectionOf(WeeklyGoalData::class)]
+        public array $weekly_goals,
     ) {}
 
     public static function fromWeek(Week $week): self
@@ -37,6 +41,9 @@ class WeekData extends Data
             days: $days,
             goals: $week->goals
                 ->map(fn (Goal $goal): GoalData => GoalData::fromGoal($goal))
+                ->all(),
+            weekly_goals: $week->weeklyGoals
+                ->map(fn (WeeklyGoal $weeklyGoal): WeeklyGoalData => WeeklyGoalData::fromWeeklyGoal($weeklyGoal))
                 ->all(),
         );
     }

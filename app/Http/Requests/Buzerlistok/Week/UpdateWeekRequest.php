@@ -17,7 +17,7 @@ class UpdateWeekRequest extends StoreWeekRequest
 
         return [
             'starts_on' => ['required', 'date', Rule::unique('buzerlistok_weeks', 'starts_on')->ignore($week->id)],
-            'goals' => ['required', 'array', 'min:1'],
+            'goals' => ['array', 'required_without:weekly_goals'],
             'goals.*.id' => [
                 'nullable',
                 'integer',
@@ -25,6 +25,13 @@ class UpdateWeekRequest extends StoreWeekRequest
                 Rule::exists('buzerlistok_goals', 'id')->where('week_id', $week->id),
             ],
             'goals.*.name' => ['required', 'string', 'max:255'],
+            ...$this->weeklyGoalRules(),
+            'weekly_goals.*.id' => [
+                'nullable',
+                'integer',
+                'distinct',
+                Rule::exists('buzerlistok_weekly_goals', 'id')->where('week_id', $week->id),
+            ],
         ];
     }
 }

@@ -28,14 +28,29 @@ class StoreWeekRequest extends FormRequest
     }
 
     /**
+     * A week needs at least one goal, daily or weekly.
+     *
      * @return array<string, array<mixed>>
      */
     public function rules(): array
     {
         return [
             'starts_on' => ['required', 'date', Rule::unique('buzerlistok_weeks', 'starts_on')],
-            'goals' => ['required', 'array', 'min:1'],
+            'goals' => ['array', 'required_without:weekly_goals'],
             'goals.*' => ['required', 'string', 'max:255'],
+            ...$this->weeklyGoalRules(),
+        ];
+    }
+
+    /**
+     * @return array<string, array<mixed>>
+     */
+    protected function weeklyGoalRules(): array
+    {
+        return [
+            'weekly_goals' => ['array'],
+            'weekly_goals.*.name' => ['required', 'string', 'max:255'],
+            'weekly_goals.*.target' => ['required', 'integer', 'min:1', 'max:99'],
         ];
     }
 
@@ -46,6 +61,7 @@ class StoreWeekRequest extends FormRequest
     {
         return [
             'starts_on.unique' => 'A buzerlistok already exists for that week.',
+            'goals.required_without' => 'Add at least one daily or weekly goal.',
         ];
     }
 }

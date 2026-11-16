@@ -15,6 +15,13 @@ id: number,
 starts_on: string,
 days: string[],
 goals: App.Data.Buzerlistok.GoalData[],
+weekly_goals: App.Data.Buzerlistok.WeeklyGoalData[],
+};
+export type WeeklyGoalData = {
+id: number,
+name: string,
+target: number,
+completions: number,
 };
 }
 namespace Finance {

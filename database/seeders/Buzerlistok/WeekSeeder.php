@@ -16,6 +16,8 @@ class WeekSeeder extends Seeder
     {
         $goalNames = ['Exercise', 'Read 30 minutes', 'No sugar', 'Meditate', 'Sleep before 23:00'];
 
+        $weeklyGoalTargets = ['Gym' => 3, 'Shave' => 1, 'Call parents' => 1];
+
         $today = Carbon::today();
 
         foreach (range(3, 0) as $weeksAgo) {
@@ -25,6 +27,15 @@ class WeekSeeder extends Seeder
 
             if ($week->goals()->exists()) {
                 continue;
+            }
+
+            foreach (array_keys($weeklyGoalTargets) as $position => $name) {
+                $week->weeklyGoals()->create([
+                    'name' => $name,
+                    'target' => $weeklyGoalTargets[$name],
+                    'completions' => fake()->numberBetween(0, $weeklyGoalTargets[$name] + 1),
+                    'position' => $position,
+                ]);
             }
 
             foreach ($goalNames as $position => $name) {
