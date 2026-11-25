@@ -190,6 +190,11 @@ function dayStatus(week: Week, date: string): DayStatus | null {
     return date < today.value ? 'fail' : null;
 }
 
+/** Past its Sunday, so weekly goals not done by now count as missed. */
+function isWeekOver(week: Week): boolean {
+    return today.value > week.days[week.days.length - 1];
+}
+
 function weekSuccessRate(week: Week): number | null {
     return successRateOn(week, today.value);
 }
@@ -768,12 +773,16 @@ function weekRange(week: Week): string {
                                     :class="
                                         box <= weeklyGoal.completions
                                             ? cellClassByStatus.get('success')
-                                            : 'bg-transparent hover:bg-muted'
+                                            : isWeekOver(week)
+                                              ? cellClassByStatus.get('fail')
+                                              : 'bg-transparent hover:bg-muted'
                                     "
                                     :aria-label="`${weeklyGoal.name} — time ${box} of ${weeklyGoal.target}${
                                         box <= weeklyGoal.completions
                                             ? ' — done'
-                                            : ''
+                                            : isWeekOver(week)
+                                              ? ' — missed'
+                                              : ''
                                     }`"
                                     :aria-pressed="box <= weeklyGoal.completions"
                                     :disabled="updatingWeeklyGoal"
@@ -781,6 +790,11 @@ function weekRange(week: Week): string {
                                 >
                                     <Check
                                         v-if="box <= weeklyGoal.completions"
+                                        class="size-4 text-white"
+                                    />
+
+                                    <X
+                                        v-else-if="isWeekOver(week)"
                                         class="size-4 text-white"
                                     />
                                 </button>
