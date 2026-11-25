@@ -14,6 +14,7 @@ class AssetData extends Data
         public string $name,
         public ?string $color,
         public bool $tracks_monthly_balance,
+        public bool $is_retirement,
         public ?int $statements_count = null,
     ) {}
 }

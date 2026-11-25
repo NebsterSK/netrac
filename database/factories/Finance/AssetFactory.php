@@ -23,6 +23,7 @@ class AssetFactory extends Factory
             'name' => fake()->unique()->words(asText: true),
             'color' => fake()->hexColor(),
             'tracks_monthly_balance' => false,
+            'is_retirement' => false,
         ];
     }
 
@@ -33,6 +34,16 @@ class AssetFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'tracks_monthly_balance' => true,
+        ]);
+    }
+
+    /**
+     * Mark the asset as retirement savings, locked until retirement age.
+     */
+    public function retirement(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_retirement' => true,
         ]);
     }
 }

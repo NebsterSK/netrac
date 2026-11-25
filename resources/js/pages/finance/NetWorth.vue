@@ -20,6 +20,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Columns3,
+    Lock,
     MessageSquare,
     Plus,
 } from 'lucide-vue-next';
@@ -119,6 +120,7 @@ const columns = computed(() =>
         ownerId: asset.user_id,
         owner: ownerById(asset.user_id),
         label: asset.name,
+        isRetirement: asset.is_retirement,
         color: hexToRgb(asset.color ?? FALLBACK_ASSET_COLOR),
     })),
 );
@@ -1040,6 +1042,17 @@ const breadcrumbs: BreadcrumbItem[] = [
                                             </span>
 
                                             {{ col.label }}
+
+                                            <span
+                                                v-if="col.isRetirement"
+                                                class="inline-flex"
+                                                title="Retirement savings: can't be withdrawn or sold before retirement age"
+                                            >
+                                                <Lock
+                                                    class="size-3 shrink-0"
+                                                    aria-label="Retirement savings"
+                                                />
+                                            </span>
                                         </span>
 
                                         <span

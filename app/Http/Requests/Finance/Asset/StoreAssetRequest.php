@@ -17,6 +17,7 @@ class StoreAssetRequest extends FormRequest
             'name' => ['required', 'string', 'max:255', Rule::unique('assets', 'name')->where('user_id', $this->input('user_id'))],
             'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'tracks_monthly_balance' => ['required', 'boolean'],
+            'is_retirement' => ['boolean'],
         ];
     }
 }

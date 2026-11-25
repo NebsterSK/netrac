@@ -126,6 +126,53 @@ it('updates an asset', function () {
         ->and($asset->color)->toBeNull();
 });
 
+it('stores an asset as retirement savings', function () {
+    $owner = verifiedUser();
+
+    $this->actingAs($owner)
+        ->post(route('finance.assets.store'), ['user_id' => $owner->id, 'name' => 'Uniqa DDS', 'tracks_monthly_balance' => false, 'is_retirement' => true])
+        ->assertSessionHasNoErrors();
+
+    expect(Asset::where('name', 'Uniqa DDS')->sole()->is_retirement)->toBeTrue();
+});
+
+it('marks and unmarks an asset as retirement savings', function () {
+    $asset = Asset::factory()->create();
+    $payload = ['user_id' => $asset->user_id, 'name' => $asset->name, 'tracks_monthly_balance' => false];
+
+    $this->actingAs(verifiedUser())
+        ->put(route('finance.assets.update', $asset), [...$payload, 'is_retirement' => true])
+        ->assertSessionHasNoErrors();
+
+    expect($asset->refresh()->is_retirement)->toBeTrue();
+
+    $this->put(route('finance.assets.update', $asset), [...$payload, 'is_retirement' => false])
+        ->assertSessionHasNoErrors();
+
+    expect($asset->refresh()->is_retirement)->toBeFalse();
+});
+
+it('rejects a retirement flag that is not a boolean', function () {
+    $owner = verifiedUser();
+
+    $this->actingAs($owner)
+        ->from(route('finance.assets.index'))
+        ->post(route('finance.assets.store'), ['user_id' => $owner->id, 'name' => 'Savings', 'tracks_monthly_balance' => false, 'is_retirement' => 'soon'])
+        ->assertSessionHasErrors('is_retirement');
+});
+
+it('exposes the retirement flag to the assets and net worth pages', function () {
+    $owner = verifiedUser();
+    Asset::factory()->for($owner, 'owner')->retirement()->create();
+
+    $this->actingAs($owner)
+        ->get(route('finance.assets.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('assets.0.is_retirement', true));
+
+    $this->get(route('finance.net-worth.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('assets.0.is_retirement', true));
+});
+
 it('keeps its own name when updating', function () {
     $asset = Asset::factory()->create(['name' => 'Same']);
 

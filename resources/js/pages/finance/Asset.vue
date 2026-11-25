@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { EllipsisVertical, Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import {
+    EllipsisVertical,
+    Lock,
+    Pencil,
+    Plus,
+    Trash2,
+} from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import ColorPicker from '@/components/ColorPicker.vue';
 import InputError from '@/components/InputError.vue';
@@ -58,6 +64,7 @@ const form = useForm({
     name: '',
     color: null as string | null,
     tracks_monthly_balance: false,
+    is_retirement: false,
 });
 
 function openCreate() {
@@ -74,6 +81,7 @@ function openEdit(asset: Asset) {
     form.name = asset.name;
     form.color = asset.color;
     form.tracks_monthly_balance = asset.tracks_monthly_balance;
+    form.is_retirement = asset.is_retirement;
     form.clearErrors();
     showDialog.value = true;
 }
@@ -212,6 +220,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                                         >
                                             Monthly balance
                                         </Badge>
+                                        <Badge
+                                            v-if="asset.is_retirement"
+                                            variant="outline"
+                                            class="text-xs font-normal"
+                                            title="Retirement savings: can't be withdrawn or sold before retirement age"
+                                        >
+                                            <Lock class="size-3" />
+                                            Retirement
+                                        </Badge>
+
                                     </span>
                                 </td>
 
@@ -340,6 +358,33 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 :message="form.errors.tracks_monthly_balance"
                             />
                         </div>
+
+                        <div class="space-y-2">
+                            <Label
+                                for="asset-is-retirement"
+                                class="flex items-center gap-3"
+                            >
+                                <Checkbox
+                                    id="asset-is-retirement"
+                                    :model-value="form.is_retirement"
+                                    @update:model-value="
+                                        (checked) =>
+                                            (form.is_retirement =
+                                                checked === true)
+                                    "
+                                />
+
+                                <span>Retirement savings</span>
+                            </Label>
+
+                            <p class="text-xs text-muted-foreground">
+                                Can't be withdrawn or sold before retirement
+                                age. Only a label; it changes no numbers.
+                            </p>
+
+                            <InputError :message="form.errors.is_retirement" />
+                        </div>
+
 
                         <DialogFooter>
                             <Button

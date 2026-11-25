@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string|null $color
  * @property bool $tracks_monthly_balance
+ * @property bool $is_retirement
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Statement> $statements
@@ -32,7 +33,7 @@ use Illuminate\Support\Carbon;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['user_id', 'name', 'color', 'tracks_monthly_balance'])]
+#[Fillable(['user_id', 'name', 'color', 'tracks_monthly_balance', 'is_retirement'])]
 class Asset extends Model
 {
     /** @use HasFactory<AssetFactory> */
@@ -45,6 +46,7 @@ class Asset extends Model
     {
         return [
             'tracks_monthly_balance' => 'boolean',
+            'is_retirement' => 'boolean',
         ];
     }
 

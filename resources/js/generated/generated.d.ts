@@ -31,6 +31,7 @@ user_id: number,
 name: string,
 color: string | null,
 tracks_monthly_balance: boolean,
+is_retirement: boolean,
 statements_count: number | null,
 };
 export type ExpenseCategoryBreakdownData = {
