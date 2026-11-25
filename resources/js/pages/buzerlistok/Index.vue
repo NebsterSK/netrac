@@ -223,7 +223,11 @@ function submitMark(goalId: number, date: string, status: MarkStatus | null) {
 
 const updatingWeeklyGoal = ref(false);
 
-function changeCompletions(weeklyGoal: WeeklyGoal, change: number) {
+/**
+ * Weekly goal boxes fill from the left, so ticking any empty box ticks it and
+ * the ones before it, and unticking a ticked box clears it and the ones after.
+ */
+function toggleWeeklyBox(weeklyGoal: WeeklyGoal, box: number) {
     if (updatingWeeklyGoal.value) {
         return;
     }
@@ -232,7 +236,7 @@ function changeCompletions(weeklyGoal: WeeklyGoal, change: number) {
 
     router.put(
         completions.update.url(weeklyGoal.id),
-        { completions: Math.max(0, weeklyGoal.completions + change) },
+        { completions: box <= weeklyGoal.completions ? box - 1 : box },
         {
             preserveScroll: true,
             preserveState: true,
@@ -755,59 +759,31 @@ function weekRange(week: Week): string {
                                 {{ weeklyGoal.name }}
                             </span>
 
-                            <div class="flex shrink-0 items-center gap-1">
-                                <Button
+                            <div class="flex flex-wrap justify-end gap-1">
+                                <button
+                                    v-for="box in weeklyGoal.target"
+                                    :key="box"
                                     type="button"
-                                    variant="outline"
-                                    size="icon-sm"
-                                    class="cursor-pointer"
-                                    :aria-label="`${weeklyGoal.name}: one time less`"
-                                    :disabled="
-                                        updatingWeeklyGoal ||
-                                        weeklyGoal.completions === 0
-                                    "
-                                    @click="changeCompletions(weeklyGoal, -1)"
-                                >
-                                    <Minus class="size-4" />
-                                </Button>
-
-                                <span
-                                    class="flex h-8 min-w-14 items-center justify-center gap-1 rounded-md px-2 font-mono text-sm"
+                                    class="flex size-8 cursor-pointer items-center justify-center rounded-md border border-border/60 transition-colors disabled:cursor-default"
                                     :class="
-                                        weeklyGoal.completions >=
-                                        weeklyGoal.target
-                                            ? 'bg-green-500 text-white dark:bg-green-600'
-                                            : 'bg-muted'
+                                        box <= weeklyGoal.completions
+                                            ? cellClassByStatus.get('success')
+                                            : 'bg-transparent hover:bg-muted'
                                     "
-                                    :aria-label="`${weeklyGoal.completions} of ${weeklyGoal.target} times done`"
+                                    :aria-label="`${weeklyGoal.name} — time ${box} of ${weeklyGoal.target}${
+                                        box <= weeklyGoal.completions
+                                            ? ' — done'
+                                            : ''
+                                    }`"
+                                    :aria-pressed="box <= weeklyGoal.completions"
+                                    :disabled="updatingWeeklyGoal"
+                                    @click="toggleWeeklyBox(weeklyGoal, box)"
                                 >
                                     <Check
-                                        v-if="
-                                            weeklyGoal.completions >=
-                                            weeklyGoal.target
-                                        "
-                                        class="size-3.5"
+                                        v-if="box <= weeklyGoal.completions"
+                                        class="size-4 text-white"
                                     />
-
-                                    {{ weeklyGoal.completions }}/{{
-                                        weeklyGoal.target
-                                    }}
-                                </span>
-
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon-sm"
-                                    class="cursor-pointer"
-                                    :aria-label="`${weeklyGoal.name}: one time more`"
-                                    :disabled="
-                                        updatingWeeklyGoal ||
-                                        weeklyGoal.completions >= 99
-                                    "
-                                    @click="changeCompletions(weeklyGoal, 1)"
-                                >
-                                    <Plus class="size-4" />
-                                </Button>
+                                </button>
                             </div>
                         </li>
                     </ul>
