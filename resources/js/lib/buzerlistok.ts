@@ -103,7 +103,7 @@ export type Streak = { days: number; from: string; to: string };
 export type Streaks = {
     /** Green days in a row up to today (or yesterday while today is still open). */
     current: number;
-    /** The longest run of green days ever, or null before the first green day. */
+    /** The longest run of green days ever (the latest one on a tie), or null before the first green day. */
     longest: Streak | null;
 };
 
@@ -148,7 +148,8 @@ export function greenDayStreaks(results: DayResult[], today: string): Streaks {
                 ? { ...run, days: run.days + 1, to: entry.date }
                 : { days: 1, from: entry.date, to: entry.date };
 
-        if (longest === null || run.days > longest.days) {
+        // `>=` so a tie goes to the most recent streak.
+        if (longest === null || run.days >= longest.days) {
             longest = run;
         }
     }
