@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Buzerlistok;
 
+use App\Data\Buzerlistok\DayResultData;
 use App\Data\Buzerlistok\StoreWeekData;
 use App\Data\Buzerlistok\UpdateWeekData;
 use App\Data\Buzerlistok\WeekData;
@@ -32,6 +33,7 @@ class WeekController extends Controller
                 fn (Week $week): WeekData => WeekData::fromWeek($week),
             ),
             'takenWeekStarts' => $this->takenWeekStarts(),
+            'dayResults' => DayResultData::forAllWeeks(),
         ]);
     }
 

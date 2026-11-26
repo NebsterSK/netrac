@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Buzerlistok\DayResultData;
 use App\Data\Buzerlistok\WeekData;
 use App\Data\Finance\ExpenseCategoryBreakdownData;
 use App\Data\Finance\MonthlyBalanceData;
@@ -66,6 +67,7 @@ class DashboardController extends Controller
                 ->map(fn (ExpenseCategory $category): ExpenseCategoryBreakdownData => ExpenseCategoryBreakdownData::fromCategory($category))
                 ->values(),
             'buzerlistokWeeks' => $buzerlistokWeeks,
+            'buzerlistokDayResults' => DayResultData::forAllWeeks(),
             'latestWeights' => $latestWeights,
         ]);
     }

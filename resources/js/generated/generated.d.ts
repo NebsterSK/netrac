@@ -1,6 +1,10 @@
 declare namespace App {
 namespace Data {
 namespace Buzerlistok {
+export type DayResultData = {
+date: string,
+result: App.Enums.Buzerlistok.DayResult,
+};
 export type GoalData = {
 id: number,
 name: string,
@@ -141,6 +145,7 @@ weight: number,
 }
 namespace Enums {
 namespace Buzerlistok {
+export type DayResult = 'success' | 'fail' | 'incomplete';
 export type MarkStatus = 'success' | 'partial' | 'fail';
 }
 namespace Health {

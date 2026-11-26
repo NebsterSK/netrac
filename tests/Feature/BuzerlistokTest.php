@@ -35,6 +35,53 @@ describe('access control', function () {
     });
 });
 
+describe('day results for streaks', function () {
+    it('rates each day of every week with daily goals, oldest first', function () {
+        $week = Week::factory()->create(['starts_on' => '2026-07-06']);
+        $read = Goal::factory()->create(['week_id' => $week->id]);
+        $run = Goal::factory()->create(['week_id' => $week->id]);
+
+        Mark::factory()->create(['goal_id' => $read->id, 'marked_on' => '2026-07-06', 'status' => MarkStatus::Success]);
+        Mark::factory()->create(['goal_id' => $run->id, 'marked_on' => '2026-07-06', 'status' => MarkStatus::Partial]);
+        Mark::factory()->create(['goal_id' => $read->id, 'marked_on' => '2026-07-07', 'status' => MarkStatus::Success]);
+        Mark::factory()->create(['goal_id' => $run->id, 'marked_on' => '2026-07-07', 'status' => MarkStatus::Fail]);
+        Mark::factory()->create(['goal_id' => $read->id, 'marked_on' => '2026-07-08', 'status' => MarkStatus::Success]);
+
+        $this->actingAs(verifiedUser())
+            ->get(route('buzerlistok.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('dayResults', 7)
+                ->where('dayResults.0', ['date' => '2026-07-06', 'result' => 'success'])
+                ->where('dayResults.1', ['date' => '2026-07-07', 'result' => 'fail'])
+                ->where('dayResults.2', ['date' => '2026-07-08', 'result' => 'incomplete'])
+                ->where('dayResults.6', ['date' => '2026-07-12', 'result' => 'incomplete']));
+    });
+
+    it('leaves out weeks without daily goals', function () {
+        Week::factory()->create(['starts_on' => '2026-06-29']);
+        WeeklyGoal::factory()->create(['week_id' => Week::factory()->create(['starts_on' => '2026-07-06'])->id]);
+        Goal::factory()->create(['week_id' => Week::factory()->create(['starts_on' => '2026-07-13'])->id]);
+
+        $this->actingAs(verifiedUser())
+            ->get(route('buzerlistok.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('dayResults', 7)
+                ->where('dayResults.0.date', '2026-07-13'));
+    });
+
+    it('includes weeks beyond the twelve displayed ones', function () {
+        foreach (range(0, 12) as $weeksAgo) {
+            Goal::factory()->create([
+                'week_id' => Week::factory()->create(['starts_on' => now()->startOfWeek()->subWeeks($weeksAgo)->toDateString()])->id,
+            ]);
+        }
+
+        $this->actingAs(verifiedUser())
+            ->get(route('buzerlistok.index'))
+            ->assertInertia(fn (Assert $page) => $page->has('dayResults', 13 * 7));
+    });
+});
+
 it('lists every taken week start, including weeks beyond the displayed ones', function () {
     foreach (range(0, 12) as $weeksAgo) {
         Week::factory()->create(['starts_on' => now()->startOfWeek()->subWeeks($weeksAgo)->toDateString()]);

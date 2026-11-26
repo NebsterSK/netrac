@@ -95,3 +95,79 @@ export function weeklyGoalPayload(
         }))
         .filter((field) => field.name !== '');
 }
+
+type DayResult = App.Data.Buzerlistok.DayResultData;
+
+export type Streak = { days: number; from: string; to: string };
+
+export type Streaks = {
+    /** Green days in a row up to today (or yesterday while today is still open). */
+    current: number;
+    /** The longest run of green days ever, or null before the first green day. */
+    longest: Streak | null;
+};
+
+/** `YYYY-MM-DD` of the day before the given one. */
+function previousDay(date: string): string {
+    const [year, month, day] = date.split('-').map(Number);
+    const previous = new Date(year, month - 1, day - 1);
+    const previousMonth = String(previous.getMonth() + 1).padStart(2, '0');
+    const previousDate = String(previous.getDate()).padStart(2, '0');
+
+    return `${previous.getFullYear()}-${previousMonth}-${previousDate}`;
+}
+
+/**
+ * Green-day streaks from every tracked day. A day is green when all its daily
+ * goals succeeded (green or blue). A missed, failed or untracked day breaks a
+ * streak, except today, which doesn't break the current streak while it's
+ * still open.
+ */
+export function greenDayStreaks(results: DayResult[], today: string): Streaks {
+    const resultByDate = new Map(
+        results.map((entry) => [entry.date, entry.result]),
+    );
+
+    let longest = null as Streak | null;
+    let run = null as Streak | null;
+
+    for (const entry of [...results].sort((left, right) =>
+        left.date.localeCompare(right.date),
+    )) {
+        if (entry.date > today) {
+            break;
+        }
+
+        if (entry.result !== 'success') {
+            run = null;
+            continue;
+        }
+
+        run =
+            run !== null && run.to === previousDay(entry.date)
+                ? { ...run, days: run.days + 1, to: entry.date }
+                : { days: 1, from: entry.date, to: entry.date };
+
+        if (longest === null || run.days > longest.days) {
+            longest = run;
+        }
+    }
+
+    let current = 0;
+    let date = today;
+
+    if (resultByDate.get(today) === 'fail') {
+        return { current: 0, longest };
+    }
+
+    if (resultByDate.get(today) !== 'success') {
+        date = previousDay(today);
+    }
+
+    while (resultByDate.get(date) === 'success') {
+        current++;
+        date = previousDay(date);
+    }
+
+    return { current, longest };
+}

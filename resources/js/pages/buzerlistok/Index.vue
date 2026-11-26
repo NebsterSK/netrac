@@ -12,6 +12,7 @@ import {
     X,
 } from 'lucide-vue-next';
 import { computed, nextTick, ref } from 'vue';
+import BuzerlistokStreaks from '@/components/BuzerlistokStreaks.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +56,7 @@ type Brush = MarkStatus | 'erase';
 const props = defineProps<{
     weeks: Week[];
     takenWeekStarts: string[];
+    dayResults: App.Data.Buzerlistok.DayResultData[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -457,352 +459,365 @@ function weekRange(week: Week): string {
     <Head title="Buzerlistok" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-4 p-4">
-            <!-- Palette toolbar -->
+        <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2 lg:items-start">
+            <!-- Streaks and brush: on top on phones, a sticky right column on desktop -->
             <div
-                class="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-xl border bg-background/95 p-3 backdrop-blur"
+                class="flex flex-col gap-4 max-lg:contents lg:sticky lg:top-4 lg:order-2"
             >
-                <span
-                    class="text-sm font-medium text-muted-foreground max-sm:hidden"
+                <Card>
+                    <CardContent class="max-sm:px-4">
+                        <BuzerlistokStreaks :day-results="dayResults" />
+                    </CardContent>
+                </Card>
+
+                <!-- Palette toolbar -->
+                <div
+                    class="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-xl border bg-background/95 p-3 backdrop-blur"
                 >
-                    Brush:
-                </span>
-
-                <div class="flex items-center gap-2">
-                    <button
-                        v-for="entry in PALETTE"
-                        :key="entry.brush"
-                        type="button"
-                        :title="entry.label"
-                        :aria-label="entry.label"
-                        class="flex size-8 cursor-pointer items-center justify-center rounded-md ring-offset-2 ring-offset-background transition-all"
-                        :class="[
-                            entry.swatch,
-                            activeBrush === entry.brush
-                                ? 'ring-2 ring-primary'
-                                : 'opacity-70 hover:opacity-100',
-                        ]"
-                        @click="activeBrush = entry.brush"
+                    <span
+                        class="text-sm font-medium text-muted-foreground max-sm:hidden"
                     >
-                        <component
-                            :is="entry.glyph"
-                            class="size-4"
-                            :class="entry.glyphClass"
-                        />
-                    </button>
+                        Brush:
+                    </span>
 
-                    <button
-                        type="button"
-                        title="Erase"
-                        aria-label="Erase"
-                        class="flex size-8 cursor-pointer items-center justify-center rounded-md border ring-offset-2 ring-offset-background transition-all"
-                        :class="
-                            activeBrush === 'erase'
-                                ? 'ring-2 ring-primary'
-                                : 'opacity-70 hover:opacity-100'
-                        "
-                        @click="activeBrush = 'erase'"
-                    >
-                        <Eraser class="size-4" />
-                    </button>
-                </div>
+                    <div class="flex items-center gap-2">
+                        <button
+                            v-for="entry in PALETTE"
+                            :key="entry.brush"
+                            type="button"
+                            :title="entry.label"
+                            :aria-label="entry.label"
+                            class="flex size-8 cursor-pointer items-center justify-center rounded-md ring-offset-2 ring-offset-background transition-all"
+                            :class="[
+                                entry.swatch,
+                                activeBrush === entry.brush
+                                    ? 'ring-2 ring-primary'
+                                    : 'opacity-70 hover:opacity-100',
+                            ]"
+                            @click="activeBrush = entry.brush"
+                        >
+                            <component
+                                :is="entry.glyph"
+                                class="size-4"
+                                :class="entry.glyphClass"
+                            />
+                        </button>
 
-                <div class="ml-auto">
-                    <Button
-                        size="sm"
-                        class="cursor-pointer"
-                        @click="openCreateDialog()"
-                    >
-                        <Plus class="size-4" />
-                        New week
-                    </Button>
+                        <button
+                            type="button"
+                            title="Erase"
+                            aria-label="Erase"
+                            class="flex size-8 cursor-pointer items-center justify-center rounded-md border ring-offset-2 ring-offset-background transition-all"
+                            :class="
+                                activeBrush === 'erase'
+                                    ? 'ring-2 ring-primary'
+                                    : 'opacity-70 hover:opacity-100'
+                            "
+                            @click="activeBrush = 'erase'"
+                        >
+                            <Eraser class="size-4" />
+                        </button>
+                    </div>
+
+                    <div class="ml-auto">
+                        <Button
+                            size="sm"
+                            class="cursor-pointer"
+                            @click="openCreateDialog()"
+                        >
+                            <Plus class="size-4" />
+                            New week
+                        </Button>
+                    </div>
                 </div>
             </div>
 
-            <p
-                v-if="weeks.length === 0"
-                class="py-12 text-center text-sm text-muted-foreground"
-            >
-                No weeks yet. Create one to start tracking your goals.
-            </p>
-
-            <!-- One table per week, newest first -->
-            <Card
-                v-for="week in weeks"
-                :key="week.id"
-                class="max-w-full self-start max-sm:self-stretch"
-            >
-                <CardHeader class="flex items-center justify-between gap-2">
-                    <CardTitle
-                        class="flex flex-wrap items-baseline gap-x-3 leading-8"
-                    >
-                        {{ weekRange(week) }}
-
-                        <span
-                            v-if="weekSuccessRate(week) !== null"
-                            class="font-mono text-base font-semibold"
-                            :style="{
-                                color: successRateColor(weekSuccessRate(week)!),
-                            }"
-                            :title="`${weekSuccessRate(week)}% of goals succeeded`"
-                        >
-                            {{ weekSuccessRate(week) }}%
-                        </span>
-                    </CardTitle>
-
-                    <div class="flex items-center gap-1">
-                        <Button
-                            as-child
-                            variant="ghost"
-                            size="icon-sm"
-                            class="cursor-pointer"
-                        >
-                            <Link
-                                :href="buzerlistok.edit(week.id)"
-                                aria-label="Edit week"
-                            >
-                                <Pencil class="size-4" />
-                            </Link>
-                        </Button>
-
-                        <Button
-                            v-if="week.id === latestWeekId"
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            class="cursor-pointer"
-                            aria-label="Duplicate week into the following week"
-                            title="Duplicate into next week"
-                            :disabled="duplicatingWeekId !== null"
-                            @click="duplicateWeek(week)"
-                        >
-                            <Spinner
-                                v-if="duplicatingWeekId === week.id"
-                                class="size-4"
-                            />
-
-                            <Copy v-else class="size-4" />
-                        </Button>
-
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            class="cursor-pointer text-red-600 dark:text-red-400"
-                            aria-label="Delete week"
-                            @click="deleteWeek(week)"
-                        >
-                            <Trash2 class="size-4" />
-                        </Button>
-                    </div>
-                </CardHeader>
-
-                <CardContent
-                    v-if="week.goals.length > 0 || week.weekly_goals.length === 0"
-                    class="overflow-x-auto max-sm:px-4"
+            <div class="flex flex-col gap-4 lg:order-1">
+                <p
+                    v-if="weeks.length === 0"
+                    class="py-12 text-center text-sm text-muted-foreground"
                 >
-                    <p
-                        v-if="
-                            week.goals.length === 0 &&
-                            week.weekly_goals.length === 0
-                        "
-                        class="py-4 text-center text-sm text-muted-foreground"
-                    >
-                        No goals for this week.
-                    </p>
+                    No weeks yet. Create one to start tracking your goals.
+                </p>
 
-                    <table
-                        v-else-if="week.goals.length > 0"
-                        class="border-separate border-spacing-1 text-sm"
-                    >
-                        <thead>
-                            <tr>
-                                <th
-                                    class="px-2 py-1 text-left font-medium max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card max-sm:pl-0"
-                                ></th>
+                <!-- One table per week, newest first -->
+                <Card
+                    v-for="week in weeks"
+                    :key="week.id"
+                    class="max-w-full self-start max-sm:self-stretch"
+                >
+                    <CardHeader class="flex items-center justify-between gap-2">
+                        <CardTitle
+                            class="flex flex-wrap items-baseline gap-x-3 leading-8"
+                        >
+                            {{ weekRange(week) }}
 
-                                <th
-                                    v-for="goal in week.goals"
-                                    :key="goal.id"
-                                    class="max-w-32 px-2 py-1 text-left align-bottom font-medium max-sm:max-w-9 max-sm:px-0"
-                                >
-                                    <span
-                                        class="block truncate max-sm:mx-auto max-sm:max-h-28 max-sm:rotate-180 max-sm:[writing-mode:vertical-rl]"
-                                        :title="goal.name"
-                                    >
-                                        {{ goal.name }}
-                                    </span>
-                                </th>
-
-                                <th
-                                    class="px-2 py-1 pl-3 text-left align-bottom font-medium max-sm:max-w-9 max-sm:px-0 max-sm:pl-1"
-                                >
-                                    <span
-                                        class="block max-sm:mx-auto max-sm:rotate-180 max-sm:[writing-mode:vertical-rl]"
-                                    >
-                                        Day
-                                    </span>
-                                </th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            <tr
-                                v-for="date in daysDescending(week)"
-                                :key="date"
+                            <span
+                                v-if="weekSuccessRate(week) !== null"
+                                class="font-mono text-base font-semibold"
+                                :style="{
+                                    color: successRateColor(weekSuccessRate(week)!),
+                                }"
+                                :title="`${weekSuccessRate(week)}% of goals succeeded`"
                             >
-                                <td
-                                    class="px-2 py-1 whitespace-nowrap text-muted-foreground max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card max-sm:pl-0"
-                                >
-                                    {{ formatDay(date) }}
-                                </td>
+                                {{ weekSuccessRate(week) }}%
+                            </span>
+                        </CardTitle>
 
-                                <td
-                                    v-for="goal in week.goals"
-                                    :key="goal.id"
-                                    class="p-0"
+                        <div class="flex items-center gap-1">
+                            <Button
+                                as-child
+                                variant="ghost"
+                                size="icon-sm"
+                                class="cursor-pointer"
+                            >
+                                <Link
+                                    :href="buzerlistok.edit(week.id)"
+                                    aria-label="Edit week"
                                 >
-                                    <button
-                                        type="button"
-                                        class="flex size-8 cursor-pointer items-center justify-center rounded-md border border-border/60 transition-colors"
-                                        :class="
-                                            markFor(goal.id, date)
-                                                ? cellClassByStatus.get(
-                                                      markFor(goal.id, date)!
-                                                          .status,
-                                                  )
-                                                : 'bg-transparent hover:bg-muted'
-                                        "
-                                        :aria-label="`${goal.name} — ${formatDay(date)}${
-                                            markFor(goal.id, date)
-                                                ? ` — ${paletteByStatus.get(markFor(goal.id, date)!.status)?.label}`
-                                                : ''
-                                        }`"
-                                        @click="paintCell(goal.id, date)"
+                                    <Pencil class="size-4" />
+                                </Link>
+                            </Button>
+
+                            <Button
+                                v-if="week.id === latestWeekId"
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                class="cursor-pointer"
+                                aria-label="Duplicate week into the following week"
+                                title="Duplicate into next week"
+                                :disabled="duplicatingWeekId !== null"
+                                @click="duplicateWeek(week)"
+                            >
+                                <Spinner
+                                    v-if="duplicatingWeekId === week.id"
+                                    class="size-4"
+                                />
+
+                                <Copy v-else class="size-4" />
+                            </Button>
+
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                class="cursor-pointer text-red-600 dark:text-red-400"
+                                aria-label="Delete week"
+                                @click="deleteWeek(week)"
+                            >
+                                <Trash2 class="size-4" />
+                            </Button>
+                        </div>
+                    </CardHeader>
+
+                    <CardContent
+                        v-if="week.goals.length > 0 || week.weekly_goals.length === 0"
+                        class="overflow-x-auto max-sm:px-4"
+                    >
+                        <p
+                            v-if="
+                                week.goals.length === 0 &&
+                                week.weekly_goals.length === 0
+                            "
+                            class="py-4 text-center text-sm text-muted-foreground"
+                        >
+                            No goals for this week.
+                        </p>
+
+                        <table
+                            v-else-if="week.goals.length > 0"
+                            class="border-separate border-spacing-1 text-sm"
+                        >
+                            <thead>
+                                <tr>
+                                    <th
+                                        class="px-2 py-1 text-left font-medium max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card max-sm:pl-0"
+                                    ></th>
+
+                                    <th
+                                        v-for="goal in week.goals"
+                                        :key="goal.id"
+                                        class="max-w-32 px-2 py-1 text-left align-bottom font-medium max-sm:max-w-9 max-sm:px-0"
                                     >
-                                        <component
-                                            :is="
-                                                paletteByStatus.get(
-                                                    markFor(goal.id, date)!
-                                                        .status,
-                                                )?.glyph
-                                            "
-                                            v-if="markFor(goal.id, date)"
-                                            class="size-4"
-                                            :class="
-                                                paletteByStatus.get(
-                                                    markFor(goal.id, date)!
-                                                        .status,
-                                                )?.glyphClass
-                                            "
-                                        />
-                                    </button>
-                                </td>
+                                        <span
+                                            class="block truncate max-sm:mx-auto max-sm:max-h-28 max-sm:rotate-180 max-sm:[writing-mode:vertical-rl]"
+                                            :title="goal.name"
+                                        >
+                                            {{ goal.name }}
+                                        </span>
+                                    </th>
 
-                                <td class="p-0 pl-3 max-sm:pl-1">
-                                    <div
-                                        class="flex size-8 items-center justify-center rounded-md border"
-                                        role="img"
-                                        :class="
-                                            dayStatus(week, date) === null
-                                                ? 'border-dashed border-border/60'
-                                                : 'border-transparent ' +
-                                                  cellClassByStatus.get(
-                                                      dayStatus(week, date)!,
-                                                  )
-                                        "
-                                        :aria-label="`${formatDay(date)} — ${
-                                            dayStatus(week, date) === null
-                                                ? 'Open'
-                                                : dayStatus(week, date) ===
+                                    <th
+                                        class="px-2 py-1 pl-3 text-left align-bottom font-medium max-sm:max-w-9 max-sm:px-0 max-sm:pl-1"
+                                    >
+                                        <span
+                                            class="block max-sm:mx-auto max-sm:rotate-180 max-sm:[writing-mode:vertical-rl]"
+                                        >
+                                            Day
+                                        </span>
+                                    </th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <tr
+                                    v-for="date in daysDescending(week)"
+                                    :key="date"
+                                >
+                                    <td
+                                        class="px-2 py-1 whitespace-nowrap text-muted-foreground max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card max-sm:pl-0"
+                                    >
+                                        {{ formatDay(date) }}
+                                    </td>
+
+                                    <td
+                                        v-for="goal in week.goals"
+                                        :key="goal.id"
+                                        class="p-0"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="flex size-8 cursor-pointer items-center justify-center rounded-md border border-border/60 transition-colors"
+                                            :class="
+                                                markFor(goal.id, date)
+                                                    ? cellClassByStatus.get(
+                                                          markFor(goal.id, date)!
+                                                              .status,
+                                                      )
+                                                    : 'bg-transparent hover:bg-muted'
+                                            "
+                                            :aria-label="`${goal.name} — ${formatDay(date)}${
+                                                markFor(goal.id, date)
+                                                    ? ` — ${paletteByStatus.get(markFor(goal.id, date)!.status)?.label}`
+                                                    : ''
+                                            }`"
+                                            @click="paintCell(goal.id, date)"
+                                        >
+                                            <component
+                                                :is="
+                                                    paletteByStatus.get(
+                                                        markFor(goal.id, date)!
+                                                            .status,
+                                                    )?.glyph
+                                                "
+                                                v-if="markFor(goal.id, date)"
+                                                class="size-4"
+                                                :class="
+                                                    paletteByStatus.get(
+                                                        markFor(goal.id, date)!
+                                                            .status,
+                                                    )?.glyphClass
+                                                "
+                                            />
+                                        </button>
+                                    </td>
+
+                                    <td class="p-0 pl-3 max-sm:pl-1">
+                                        <div
+                                            class="flex size-8 items-center justify-center rounded-md border"
+                                            role="img"
+                                            :class="
+                                                dayStatus(week, date) === null
+                                                    ? 'border-dashed border-border/60'
+                                                    : 'border-transparent ' +
+                                                      cellClassByStatus.get(
+                                                          dayStatus(week, date)!,
+                                                      )
+                                            "
+                                            :aria-label="`${formatDay(date)} — ${
+                                                dayStatus(week, date) === null
+                                                    ? 'Open'
+                                                    : dayStatus(week, date) ===
+                                                        'success'
+                                                      ? 'Day succeeded'
+                                                      : 'Day failed'
+                                            }`"
+                                        >
+                                            <Check
+                                                v-if="
+                                                    dayStatus(week, date) ===
                                                     'success'
-                                                  ? 'Day succeeded'
-                                                  : 'Day failed'
+                                                "
+                                                class="size-5 text-white"
+                                                stroke-width="3"
+                                            />
+
+                                            <X
+                                                v-else-if="
+                                                    dayStatus(week, date) === 'fail'
+                                                "
+                                                class="size-5 text-white"
+                                                stroke-width="3"
+                                            />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </CardContent>
+
+                    <CardContent
+                        v-if="week.weekly_goals.length > 0"
+                        class="space-y-2 max-sm:px-4"
+                    >
+                        <h3 class="text-sm font-medium text-muted-foreground">
+                            Weekly goals
+                        </h3>
+
+                        <ul class="space-y-2">
+                            <li
+                                v-for="weeklyGoal in week.weekly_goals"
+                                :key="weeklyGoal.id"
+                                class="flex items-center gap-3"
+                            >
+                                <span
+                                    class="min-w-0 flex-1 truncate text-sm"
+                                    :title="weeklyGoal.name"
+                                >
+                                    {{ weeklyGoal.name }}
+                                </span>
+
+                                <div class="flex flex-wrap justify-end gap-1">
+                                    <button
+                                        v-for="box in weeklyGoal.target"
+                                        :key="box"
+                                        type="button"
+                                        class="flex size-8 cursor-pointer items-center justify-center rounded-md border border-border/60 transition-colors disabled:cursor-default"
+                                        :class="
+                                            box <= weeklyGoal.completions
+                                                ? cellClassByStatus.get('success')
+                                                : isWeekOver(week)
+                                                  ? cellClassByStatus.get('fail')
+                                                  : 'bg-transparent hover:bg-muted'
+                                        "
+                                        :aria-label="`${weeklyGoal.name} — time ${box} of ${weeklyGoal.target}${
+                                            box <= weeklyGoal.completions
+                                                ? ' — done'
+                                                : isWeekOver(week)
+                                                  ? ' — missed'
+                                                  : ''
                                         }`"
+                                        :aria-pressed="box <= weeklyGoal.completions"
+                                        :disabled="updatingWeeklyGoal"
+                                        @click="toggleWeeklyBox(weeklyGoal, box)"
                                     >
                                         <Check
-                                            v-if="
-                                                dayStatus(week, date) ===
-                                                'success'
-                                            "
-                                            class="size-5 text-white"
-                                            stroke-width="3"
+                                            v-if="box <= weeklyGoal.completions"
+                                            class="size-4 text-white"
                                         />
 
                                         <X
-                                            v-else-if="
-                                                dayStatus(week, date) === 'fail'
-                                            "
-                                            class="size-5 text-white"
-                                            stroke-width="3"
+                                            v-else-if="isWeekOver(week)"
+                                            class="size-4 text-white"
                                         />
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </CardContent>
-
-                <CardContent
-                    v-if="week.weekly_goals.length > 0"
-                    class="space-y-2 max-sm:px-4"
-                >
-                    <h3 class="text-sm font-medium text-muted-foreground">
-                        Weekly goals
-                    </h3>
-
-                    <ul class="space-y-2">
-                        <li
-                            v-for="weeklyGoal in week.weekly_goals"
-                            :key="weeklyGoal.id"
-                            class="flex items-center gap-3"
-                        >
-                            <span
-                                class="min-w-0 flex-1 truncate text-sm"
-                                :title="weeklyGoal.name"
-                            >
-                                {{ weeklyGoal.name }}
-                            </span>
-
-                            <div class="flex flex-wrap justify-end gap-1">
-                                <button
-                                    v-for="box in weeklyGoal.target"
-                                    :key="box"
-                                    type="button"
-                                    class="flex size-8 cursor-pointer items-center justify-center rounded-md border border-border/60 transition-colors disabled:cursor-default"
-                                    :class="
-                                        box <= weeklyGoal.completions
-                                            ? cellClassByStatus.get('success')
-                                            : isWeekOver(week)
-                                              ? cellClassByStatus.get('fail')
-                                              : 'bg-transparent hover:bg-muted'
-                                    "
-                                    :aria-label="`${weeklyGoal.name} — time ${box} of ${weeklyGoal.target}${
-                                        box <= weeklyGoal.completions
-                                            ? ' — done'
-                                            : isWeekOver(week)
-                                              ? ' — missed'
-                                              : ''
-                                    }`"
-                                    :aria-pressed="box <= weeklyGoal.completions"
-                                    :disabled="updatingWeeklyGoal"
-                                    @click="toggleWeeklyBox(weeklyGoal, box)"
-                                >
-                                    <Check
-                                        v-if="box <= weeklyGoal.completions"
-                                        class="size-4 text-white"
-                                    />
-
-                                    <X
-                                        v-else-if="isWeekOver(week)"
-                                        class="size-4 text-white"
-                                    />
-                                </button>
-                            </div>
-                        </li>
-                    </ul>
-                </CardContent>
-            </Card>
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
 
         <!-- Create week dialog -->

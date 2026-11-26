@@ -27,7 +27,8 @@ describe('access control', function () {
                 ->has('latestWeights')
                 ->has('periodAverages')
                 ->has('expenseCategories')
-                ->has('buzerlistokWeeks'));
+                ->has('buzerlistokWeeks')
+                ->has('buzerlistokDayResults'));
     });
 });
 

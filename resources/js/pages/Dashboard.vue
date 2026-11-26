@@ -4,9 +4,16 @@ import { useEventListener } from '@vueuse/core';
 import { GripVertical } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import BuzerlistokRateChart from '@/components/BuzerlistokRateChart.vue';
+import BuzerlistokStreaks from '@/components/BuzerlistokStreaks.vue';
 import ExpenseDoughnut from '@/components/ExpenseDoughnut.vue';
 import WeightTrendChart from '@/components/WeightTrendChart.vue';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardAction,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { useAppearance } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { seriesColor } from '@/lib/chartColors';
@@ -22,6 +29,7 @@ const props = defineProps<{
     periodAverages: PeriodAverages;
     expenseCategories: ExpenseCategoryBreakdown[];
     buzerlistokWeeks: App.Data.Buzerlistok.WeekData[];
+    buzerlistokDayResults: App.Data.Buzerlistok.DayResultData[];
     latestWeights: App.Data.Health.WeightData[];
 }>();
 
@@ -161,6 +169,13 @@ const periods = computed(() => [
                 <Card class="h-64 md:aspect-video md:h-auto">
                     <CardHeader>
                         <CardTitle>Buzerlistok Success Rate</CardTitle>
+
+                        <CardAction>
+                            <BuzerlistokStreaks
+                                :day-results="buzerlistokDayResults"
+                                variant="compact"
+                            />
+                        </CardAction>
                     </CardHeader>
 
                     <CardContent class="min-h-0 flex-1">
